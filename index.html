@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/auth.css" />
 </head>
 <body>
   <header class="header" id="header">
@@ -73,20 +74,16 @@
         <h2>الزامات استاندارد ISO/IEC 17025:2017</h2>
         <p>هر بند را باز کنید تا الزامات، نحوه پیاده‌سازی، مثال عملی و چک‌لیست تعاملی را ببینید</p>
       </div>
-
       <div class="progress-panel">
         <div class="progress-info">
           <span id="progressText">۰ از ۰ مورد تکمیل شده (۰٪)</span>
           <button type="button" class="btn-reset" onclick="resetProgress()">بازنشانی</button>
         </div>
         <div class="progress-track"><div class="progress-bar" id="overallProgress"></div></div>
-        <p class="progress-hint">چک‌لیست‌ها در مرورگر شما ذخیره می‌شوند. در آینده با ورود کاربر (Netlify Identity) قابل همگام‌سازی خواهند بود.</p>
       </div>
-
       <div class="search-row">
-        <input type="search" id="clauseSearch" placeholder="جستجو در بندها، الزامات، مثال‌ها و مستندات..." />
+        <input type="search" id="clauseSearch" placeholder="جستجو در بندها..." />
       </div>
-
       <div class="clause-filters">
         <button class="filter-btn active" data-filter="all">همه</button>
         <button class="filter-btn" data-filter="4">بند ۴</button>
@@ -95,10 +92,7 @@
         <button class="filter-btn" data-filter="7">بند ۷</button>
         <button class="filter-btn" data-filter="8">بند ۸</button>
       </div>
-
-      <div class="clauses-list" id="clausesList">
-        <!-- رندر پویا توسط JavaScript از data.js -->
-      </div>
+      <div class="clauses-list" id="clausesList"></div>
     </div>
   </section>
 
@@ -107,78 +101,17 @@
       <div class="section-header">
         <span class="section-tag">مستندات</span>
         <h2>راهنمای تهیه مستندات بر اساس چک‌لیست NACI</h2>
-        <p>لیست پیشنهادی مستندات و سوابق برای آمادگی ممیزی تایید صلاحیت</p>
       </div>
       <div class="docs-table-wrapper">
         <table class="docs-table">
           <thead><tr><th>بند</th><th>عنوان مستند / سابقه</th><th>نوع</th><th>اولویت</th></tr></thead>
           <tbody>
-            <tr><td>۴.۱</td><td>خط‌مشی بی‌طرفی + ارزیابی ریسک بی‌طرفی</td><td>خط‌مشی / فرم</td><td><span class="badge critical">حیاتی</span></td></tr>
-            <tr><td>۴.۲</td><td>رویه و تعهدنامه محرمانگی</td><td>رویه / فرم</td><td><span class="badge critical">حیاتی</span></td></tr>
-            <tr><td>۵</td><td>چارت سازمانی + شرح وظایف + دامنه فعالیت</td><td>ساختار</td><td><span class="badge critical">حیاتی</span></td></tr>
-            <tr><td>۶.۲</td><td>ماتریس صلاحیت + سوابق آموزش و ارزیابی</td><td>رویه / سابقه</td><td><span class="badge critical">حیاتی</span></td></tr>
-            <tr><td>۶.۴</td><td>لیست تجهیزات + شناسنامه + برنامه کالیبراسیون</td><td>لیست / سابقه</td><td><span class="badge critical">حیاتی</span></td></tr>
-            <tr><td>۶.۵</td><td>گواهی‌های کالیبراسیون با قابلیت ردیابی</td><td>سابقه</td><td><span class="badge critical">حیاتی</span></td></tr>
-            <tr><td>۷.۲</td><td>سوابق تصدیق و صحه‌گذاری روش‌ها</td><td>سابقه</td><td><span class="badge critical">حیاتی</span></td></tr>
-            <tr><td>۷.۶</td><td>بودجه و محاسبات عدم قطعیت</td><td>سابقه</td><td><span class="badge critical">حیاتی</span></td></tr>
-            <tr><td>۷.۷</td><td>برنامه و نتایج آزمون مهارت (PT)</td><td>سابقه</td><td><span class="badge critical">حیاتی</span></td></tr>
-            <tr><td>۸.۸</td><td>برنامه و گزارش ممیزی داخلی</td><td>برنامه / گزارش</td><td><span class="badge critical">حیاتی</span></td></tr>
-            <tr><td>۸.۹</td><td>صورتجلسه بازنگری مدیریت</td><td>صورتجلسه</td><td><span class="badge critical">حیاتی</span></td></tr>
+            <tr><td>۴.۱</td><td>خط‌مشی بی‌طرفی</td><td>خط‌مشی / فرم</td><td><span class="badge critical">حیاتی</span></td></tr>
+            <tr><td>۴.۲</td><td>تعهدنامه محرمانگی</td><td>رویه / فرم</td><td><span class="badge critical">حیاتی</span></td></tr>
+            <tr><td>۶.۲</td><td>ماتریس صلاحیت</td><td>رویه / سابقه</td><td><span class="badge critical">حیاتی</span></td></tr>
+            <tr><td>۸.۸</td><td>ممیزی داخلی</td><td>برنامه / گزارش</td><td><span class="badge critical">حیاتی</span></td></tr>
           </tbody>
         </table>
-      </div>
-    </div>
-  </section>
-
-  <section class="section implementation" id="implementation">
-    <div class="container">
-      <div class="section-header">
-        <span class="section-tag">مسیر پیاده‌سازی</span>
-        <h2>مراحل استقرار استاندارد</h2>
-      </div>
-      <div class="timeline">
-        <div class="timeline-item"><div class="timeline-dot">۱</div><div class="timeline-content"><h3>آماده‌سازی و Gap Analysis</h3><p>بررسی وضعیت فعلی نسبت به الزامات و چک‌لیست NACI.</p></div></div>
-        <div class="timeline-item"><div class="timeline-dot">۲</div><div class="timeline-content"><h3>طراحی و تدوین سیستم</h3><p>تهیه خط‌مشی‌ها، رویه‌ها و فرم‌ها.</p></div></div>
-        <div class="timeline-item"><div class="timeline-dot">۳</div><div class="timeline-content"><h3>پیاده‌سازی و آموزش</h3><p>اجرای سیستم و جمع‌آوری سوابق عملیاتی.</p></div></div>
-        <div class="timeline-item"><div class="timeline-dot">۴</div><div class="timeline-content"><h3>ممیزی داخلی و اقدام اصلاحی</h3><p>رفع عدم‌انطباق‌ها قبل از ارزیابی خارجی.</p></div></div>
-        <div class="timeline-item"><div class="timeline-dot">۵</div><div class="timeline-content"><h3>درخواست و ارزیابی NACI</h3><p>ارسال درخواست و اخذ گواهی تایید صلاحیت.</p></div></div>
-      </div>
-    </div>
-  </section>
-
-  <section class="section consulting" id="consulting">
-    <div class="container">
-      <div class="section-header">
-        <span class="section-tag">خدمات</span>
-        <h2>مشاوره تخصصی استقرار ISO 17025</h2>
-      </div>
-      <div class="services-grid">
-        <div class="service-card"><div class="service-icon">🔍</div><h3>تحلیل فاصله</h3><p>بررسی دقیق وضعیت و گزارش نقاط ضعف.</p></div>
-        <div class="service-card"><div class="service-icon">📝</div><h3>تدوین مستندات</h3><p>طراحی کامل خط‌مشی‌ها و رویه‌ها.</p></div>
-        <div class="service-card"><div class="service-icon">🎓</div><h3>آموزش</h3><p>آموزش کارکنان و مدیران فنی.</p></div>
-        <div class="service-card"><div class="service-icon">✅</div><h3>آماده‌سازی ممیزی</h3><p>شبیه‌سازی ممیزی و رفع عدم‌انطباق.</p></div>
-      </div>
-    </div>
-  </section>
-
-  <section class="section contact" id="contact">
-    <div class="container">
-      <div class="cta-box">
-        <h2>آماده شروع مسیر تایید صلاحیت هستید؟</h2>
-        <p>برای دریافت مشاوره اولیه با ما در ارتباط باشید.</p>
-        <form class="contact-form" id="contactForm" onsubmit="handleContact(event)">
-          <div class="form-row">
-            <input type="text" name="name" placeholder="نام و نام خانوادگی" required />
-            <input type="text" name="lab" placeholder="نام آزمایشگاه / سازمان" required />
-          </div>
-          <div class="form-row">
-            <input type="tel" name="phone" placeholder="شماره تماس" required />
-            <input type="email" name="email" placeholder="ایمیل" />
-          </div>
-          <textarea name="message" rows="4" placeholder="توضیح مختصر..."></textarea>
-          <button type="submit" class="btn btn-primary btn-full">ارسال درخواست مشاوره</button>
-        </form>
-        <p class="form-note">آماده اتصال به Netlify Forms / Identity / Functions</p>
       </div>
     </div>
   </section>
@@ -186,17 +119,14 @@
   <footer class="footer">
     <div class="container footer-inner">
       <div class="footer-brand">
-        <span class="logo-icon">🔬</span>
         <strong>مشاوره ISO/IEC 17025</strong>
-        <p>طراحی بر اساس الزامات استاندارد و رویه‌های NACI | معماری آماده Netlify</p>
-      </div>
-      <div class="footer-bottom">
-        <p>© ۱۴۰۵ | آماده استقرار روی GitHub Pages یا Netlify</p>
       </div>
     </div>
   </footer>
 
+  <script src="js/auth.js"></script>
   <script src="js/data.js"></script>
   <script src="js/main.js"></script>
+  <script src="js/gate.js"></script>
 </body>
 </html>
