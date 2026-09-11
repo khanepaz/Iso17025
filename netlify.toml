@@ -1,0 +1,11 @@
+[build]
+  publish = "."
+  # اگر بعداً از framework یا build استفاده کردید اینجا تنظیم کنید
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[forms]
+  # فرم تماس آماده است — فقط attribute netlify را به form اضافه کنید
