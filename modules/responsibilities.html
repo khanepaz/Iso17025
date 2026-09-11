@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ماتریس مسئولیت</title>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/style.css" /><link rel="stylesheet" href="../css/auth.css" />
+</head>
+<body>
+  <header class="app-header"><div class="app-header-inner"><div class="app-brand"><a href="../dashboard.html" style="color:inherit">← داشبورد</a> | مسئولیت‌ها</div><div class="app-user"><button onclick="ISOAuth.logout()">خروج</button></div></div></header>
+  <main class="app-main">
+    <div class="panel"><h2>تخصیص مسئولیت</h2>
+      <form id="respForm" class="form-grid">
+        <div><label>پرسنل</label><select name="personId" id="personSelect" required></select></div>
+        <div><label>بند</label><select name="clause"><option value="4.1">۴.۱ بی‌طرفی</option><option value="5">۵ ساختاری</option><option value="6.2">۶.۲ پرسنل</option><option value="7.8">۷.۸ گزارش‌دهی</option><option value="8.8">۸.۸ ممیزی</option><option value="8.9">۸.۹ بازنگری</option></select></div>
+        <div class="full"><label>شرح مسئولیت</label><input name="duty" required /></div>
+        <div class="full"><button type="submit" class="btn btn-primary">ثبت</button></div>
+      </form>
+    </div>
+    <div class="panel"><h2>ماتریس</h2><div class="table-wrap"><table class="data-table" id="tbl"><thead><tr><th>نام</th><th>بند</th><th>مسئولیت</th></tr></thead><tbody></tbody></table></div></div>
+  </main>
+  <script src="../js/auth.js"></script>
+  <script>
+    const session = ISOAuth.requireAuth(['lab']);
+    let co = ISOAuth.getCompany(session.companyId);
+    document.getElementById('personSelect').innerHTML = (co.staff||[]).map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+    function render() {
+      co = ISOAuth.getCompany(session.companyId);
+      const map = Object.fromEntries((co.staff||[]).map(s => [s.id, s]));
+      const list = co.matrices?.responsibilities || [];
+      document.querySelector('#tbl tbody').innerHTML = list.map(r =>
+        `<tr><td>${map[r.personId]?.name||'?'}</td><td>${r.clause}</td><td>${r.duty}</td></tr>`
+      ).join('') || '<tr><td colspan="3">خالی</td></tr>';
+    }
+    document.getElementById('respForm').onsubmit = e => {
+      e.preventDefault();
+      const fd = Object.fromEntries(new FormData(e.target));
+      co = ISOAuth.getCompany(session.companyId);
+      const list = [...(co.matrices?.responsibilities||[]), fd];
+      ISOAuth.updateCompany(session.companyId, { matrices: { ...(co.matrices||{}), responsibilities: list } });
+      e.target.reset(); render();
+    };
+    render();
+  </script>
+</body>
+</html>

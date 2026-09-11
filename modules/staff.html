@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>مدیریت پرسنل</title>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/style.css" /><link rel="stylesheet" href="../css/auth.css" />
+</head>
+<body>
+  <header class="app-header"><div class="app-header-inner"><div class="app-brand"><a href="../dashboard.html" style="color:inherit">← داشبورد</a> | پرسنل</div><div class="app-user"><button onclick="ISOAuth.logout()">خروج</button></div></div></header>
+  <main class="app-main">
+    <div class="panel"><h2>افزودن پرسنل</h2>
+      <form id="staffForm" class="form-grid">
+        <div><label>نام *</label><input name="name" required /></div>
+        <div><label>سمت *</label><input name="position" required /></div>
+        <div><label>مدرک</label><input name="education" /></div>
+        <div><label>نقش</label><select name="role"><option value="management">مدیریت</option><option value="technical" selected>فنی</option><option value="quality">کیفیت</option><option value="support">پشتیبانی</option></select></div>
+        <div class="full"><button type="submit" class="btn btn-primary">افزودن</button></div>
+      </form>
+    </div>
+    <div class="panel"><h2>لیست</h2><div class="table-wrap"><table class="data-table" id="tbl"><thead><tr><th>نام</th><th>سمت</th><th>مدرک</th><th>نقش</th></tr></thead><tbody></tbody></table></div></div>
+  </main>
+  <script src="../js/auth.js"></script>
+  <script>
+    const session = ISOAuth.requireAuth(['lab']);
+    const roleMap = { management:'مدیریت', technical:'فنی', quality:'کیفیت', support:'پشتیبانی' };
+    function render() {
+      const co = ISOAuth.getCompany(session.companyId);
+      document.querySelector('#tbl tbody').innerHTML = (co.staff||[]).map(s =>
+        `<tr><td>${s.name}</td><td>${s.position}</td><td>${s.education||'—'}</td><td>${roleMap[s.role]||s.role}</td></tr>`
+      ).join('') || '<tr><td colspan="4">خالی</td></tr>';
+    }
+    document.getElementById('staffForm').onsubmit = e => { e.preventDefault(); ISOAuth.addStaff(session.companyId, Object.fromEntries(new FormData(e.target))); e.target.reset(); render(); };
+    render();
+  </script>
+</body>
+</html>
