@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>پنل مدیریت | ISO 17025</title>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/style.css" />
+  <link rel="stylesheet" href="../css/auth.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header-inner">
+      <div class="app-brand">🔬 پنل مدیریت ISO 17025</div>
+      <div class="app-user">
+        <span>ادمین</span>
+        <button type="button" onclick="ISOAuth.logout()">خروج</button>
+      </div>
+    </div>
+  </header>
+  <main class="app-main">
+    <div class="panel">
+      <h2>ایجاد دسترسی جدید برای آزمایشگاه</h2>
+      <p style="font-size:0.9rem;color:#64748b;margin-bottom:16px">اطلاعات کلی شرکت و یوزرنیم/پسورد را وارد کنید و به مشتری بدهید.</p>
+      <form id="createUserForm" class="form-grid">
+        <div><label>نام شرکت / آزمایشگاه *</label><input name="companyName" required /></div>
+        <div><label>تلفن</label><input name="phone" /></div>
+        <div class="full"><label>آدرس</label><input name="address" /></div>
+        <div><label>مدیر ارشد</label><input name="seniorManager" /></div>
+        <div><label>مدیر فنی</label><input name="technicalManager" /></div>
+        <div><label>نام کاربری *</label><input name="username" required autocomplete="off" /></div>
+        <div><label>رمز عبور اولیه *</label><input name="password" type="text" required autocomplete="off" /></div>
+        <div class="full"><button type="submit" class="btn btn-primary">ایجاد دسترسی</button></div>
+      </form>
+      <p id="createMsg" style="margin-top:12px;font-size:0.9rem" hidden></p>
+    </div>
+    <div class="panel">
+      <h2>لیست آزمایشگاه‌ها</h2>
+      <div class="table-wrap">
+        <table class="data-table" id="usersTable">
+          <thead><tr><th>نام کاربری</th><th>شرکت</th><th>مدیر فنی</th><th>وضعیت</th><th>تاریخ</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>خروجی JSON</h2>
+      <textarea id="jsonExport" rows="6" style="width:100%;font-family:monospace;font-size:0.8rem;padding:12px;border-radius:8px;border:1px solid #e2e8f0" readonly></textarea>
+    </div>
+  </main>
+  <script src="../js/auth.js"></script>
+  <script>
+    const session = ISOAuth.requireAuth(['admin']);
+    function renderUsers() {
+      const list = ISOAuth.listLabUsers();
+      document.querySelector('#usersTable tbody').innerHTML = list.map(u =>
+        `<tr><td><code>${u.username}</code></td><td>${u.company?.name||'—'}</td><td>${u.company?.technicalManager||'—'}</td><td>${u.company?.setupComplete?'✅':'⏳'}</td><td>${new Date(u.createdAt).toLocaleDateString('fa-IR')}</td></tr>`
+      ).join('') || '<tr><td colspan="5">خالی</td></tr>';
+      document.getElementById('jsonExport').value = JSON.stringify(ISOAuth.loadData(), null, 2);
+    }
+    document.getElementById('createUserForm').onsubmit = function(e) {
+      e.preventDefault();
+      const payload = Object.fromEntries(new FormData(e.target));
+      const res = ISOAuth.createLabUser(payload);
+      const msg = document.getElementById('createMsg');
+      msg.hidden = false;
+      if (!res.ok) { msg.style.color='#dc2626'; msg.textContent=res.error; return; }
+      msg.style.color='#059669';
+      msg.textContent = `ایجاد شد — یوزر: ${payload.username} | رمز: ${payload.password}`;
+      e.target.reset(); renderUsers();
+    };
+    renderUsers();
+  </script>
+</body>
+</html>

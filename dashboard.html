@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>داشبورد | ISO 17025</title>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/auth.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header-inner">
+      <div class="app-brand">🔬 <span id="companyTitle">داشبورد</span></div>
+      <div class="app-user"><span id="userLabel"></span><button onclick="ISOAuth.logout()">خروج</button></div>
+    </div>
+  </header>
+  <main class="app-main">
+    <div class="panel"><h2>خلاصه وضعیت</h2><div id="summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px"></div></div>
+    <div class="panel">
+      <h2>ماژول‌ها</h2>
+      <div class="modules-grid">
+        <a class="module-card" href="index.html"><div class="icon">📖</div><h3>راهنمای بندبه‌بند</h3><p>الزامات و چک‌لیست</p></a>
+        <a class="module-card" href="modules/staff.html"><div class="icon">👥</div><h3>مدیریت پرسنل</h3><p>لیست و مشخصات</p></a>
+        <a class="module-card" href="modules/deputies.html"><div class="icon">🔄</div><h3>لیست جانشینان</h3><p>تعیین جانشین</p></a>
+        <a class="module-card" href="modules/responsibilities.html"><div class="icon">📋</div><h3>ماتریس مسئولیت‌ها</h3><p>وظایف و بندها</p></a>
+        <a class="module-card" href="modules/key-personnel.html"><div class="icon">⭐</div><h3>نفرات شاخص</h3><p>جدول چاپی</p></a>
+        <a class="module-card" href="setup.html"><div class="icon">⚙️</div><h3>ویرایش اطلاعات</h3><p>پروفایل شرکت</p></a>
+      </div>
+    </div>
+  </main>
+  <script src="js/auth.js"></script>
+  <script>
+    const session = ISOAuth.requireAuth(['lab']);
+    const company = ISOAuth.getCompany(session.companyId);
+    if (!company || !company.setupComplete) location.href = 'setup.html';
+    document.getElementById('userLabel').textContent = session.username;
+    document.getElementById('companyTitle').textContent = company.name || 'داشبورد';
+    document.getElementById('summary').innerHTML = `
+      <div style="background:#f0f9ff;padding:14px;border-radius:10px;text-align:center"><div style="font-size:1.5rem;font-weight:800;color:#0f4c81">${company.staff?.length||0}</div><div style="font-size:0.8rem;color:#64748b">پرسنل</div></div>
+      <div style="background:#f0fdf4;padding:14px;border-radius:10px;text-align:center"><div style="font-size:1.1rem;font-weight:700;color:#059669">${company.technicalManager||'—'}</div><div style="font-size:0.8rem;color:#64748b">مدیر فنی</div></div>
+      <div style="background:#fefce8;padding:14px;border-radius:10px;text-align:center"><div style="font-size:1.1rem;font-weight:700;color:#b45309">${company.seniorManager||'—'}</div><div style="font-size:0.8rem;color:#64748b">مدیر ارشد</div></div>`;
+  </script>
+</body>
+</html>
