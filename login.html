@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ورود | سامانه استقرار ISO 17025</title>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/auth.css" />
+</head>
+<body class="auth-page">
+  <div class="auth-card">
+    <div class="auth-logo">🔬</div>
+    <h1>سامانه استقرار ISO/IEC 17025</h1>
+    <p class="auth-sub">ورود به پنل آزمایشگاه / مدیریت</p>
+    <form id="loginForm" class="auth-form">
+      <div class="field">
+        <label for="username">نام کاربری</label>
+        <input type="text" id="username" name="username" required autocomplete="username" placeholder="نام کاربری اختصاص‌یافته" />
+      </div>
+      <div class="field">
+        <label for="password">رمز عبور</label>
+        <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="رمز عبور" />
+      </div>
+      <p id="loginError" class="auth-error" hidden></p>
+      <button type="submit" class="btn btn-primary btn-full">ورود</button>
+    </form>
+    <p class="auth-hint">
+      دسترسی توسط مدیر سامانه صادر می‌شود.<br />
+      ادمین پیش‌فرض: <code>admin</code> / <code>Admin@17025</code>
+    </p>
+  </div>
+  <script src="js/auth.js"></script>
+  <script>
+    (function () {
+      const s = window.ISOAuth.getSession();
+      if (s) {
+        location.href = s.role === 'admin' ? 'admin/index.html' : 'dashboard.html';
+        return;
+      }
+    })();
+    document.getElementById('loginForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      const errEl = document.getElementById('loginError');
+      const res = window.ISOAuth.login(username, password);
+      if (!res.ok) {
+        errEl.textContent = res.error;
+        errEl.hidden = false;
+        return;
+      }
+      if (res.user.role === 'admin') {
+        location.href = 'admin/index.html';
+      } else {
+        const co = window.ISOAuth.getCompany(res.user.companyId);
+        location.href = (co && !co.setupComplete) ? 'setup.html' : 'dashboard.html';
+      }
+    });
+  </script>
+</body>
+</html>
