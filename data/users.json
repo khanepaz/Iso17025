@@ -33,6 +33,13 @@
           "education": "",
           "role": "technical",
           "id": "st-1789191768406"
+        },
+        {
+          "name": "احمدی",
+          "position": "اپراتور",
+          "education": "",
+          "role": "support",
+          "id": "st-1789216337323-556"
         }
       ],
       "matrices": {
@@ -41,7 +48,7 @@
       },
       "setupComplete": true,
       "createdAt": "2026-09-12T05:40:56.835Z",
-      "updatedAt": "2026-09-12T05:43:18.911Z"
+      "updatedAt": "2026-09-12T12:32:17.323Z"
     }
   ]
 }
