@@ -1,73 +1,109 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
-  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>جانشینان</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>جانشینان | ISO 17025</title>
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/style.css" /><link rel="stylesheet" href="../css/auth.css" />
+  <link rel="stylesheet" href="../css/style.css" />
+  <link rel="stylesheet" href="../css/auth.css" />
 </head>
 <body>
-  <header class="app-header"><div class="app-header-inner">
-    <div class="app-brand"><a href="../dashboard.html" style="color:inherit">← داشبورد</a> | جانشینان</div>
-    <div class="app-user"><button onclick="ISOAuth.logout()">خروج</button></div>
-  </div></header>
+  <header class="app-header">
+    <div class="app-header-inner">
+      <div class="app-brand"><a href="../dashboard.html" style="color:inherit">← داشبورد</a> | جانشینان</div>
+      <div class="app-user"><button onclick="ISOAuth.logout()">خروج</button></div>
+    </div>
+  </header>
+  <div id="appNav"></div>
   <main class="app-main">
-    <div class="panel"><h2>تعیین جانشین</h2>
+    <div class="panel">
+      <h2>تعیین جانشین</h2>
+      <p id="hint" style="font-size:0.85rem;color:#64748b;margin-bottom:10px"></p>
       <form id="depForm" class="form-grid">
         <div><label>فرد اصلی</label><select name="personId" id="personSelect" required></select></div>
         <div><label>جانشین</label><select name="deputyId" id="deputySelect" required></select></div>
-        <div class="full"><button type="submit" class="btn btn-primary">ثبت</button></div>
+        <div class="full"><button type="submit" class="btn btn-primary">ثبت جانشین</button></div>
       </form>
+      <p id="msg" style="margin-top:8px;font-size:0.9rem" hidden></p>
     </div>
-    <div class="panel"><h2>جدول</h2>
-      <div class="table-wrap"><table class="data-table" id="tbl">
-        <thead><tr><th>فرد</th><th>سمت</th><th>جانشین</th><th>سمت جانشین</th><th></th></tr></thead><tbody></tbody>
-      </table></div>
+    <div class="panel">
+      <h2>جدول جانشینان</h2>
+      <div class="table-wrap">
+        <table class="data-table" id="tbl">
+          <thead><tr><th>فرد</th><th>سمت</th><th>جانشین</th><th>سمت جانشین</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </div>
   </main>
   <script src="../js/auth.js"></script>
+  <script src="../js/nav.js"></script>
   <script>
     ISOAuth.initAuth().then(function () {
-      var session = ISOAuth.requireAuth(['lab']); if (!session) return;
-      var co = ISOAuth.getCompany(session.companyId);
+      var session = ISOAuth.requireAuth(['lab']);
+      if (!session) return;
+      if (typeof renderAppNav === 'function') renderAppNav('dashboard');
+      var msg = document.getElementById('msg');
       function fill() {
-        co = ISOAuth.getCompany(session.companyId);
-        var opts = (co.staff || []).map(function (s) {
+        var co = ISOAuth.getCompany(session.companyId);
+        var staff = (co && co.staff) || [];
+        var hint = document.getElementById('hint');
+        if (staff.length < 2) {
+          hint.innerHTML = 'برای تعیین جانشین حداقل <b>۲ نفر</b> در <a href="staff.html">پرسنل</a> ثبت کنید. الان: ' + staff.length + ' نفر.';
+        } else {
+          hint.textContent = 'از لیست پرسنل ثبت‌شده انتخاب کنید.';
+        }
+        var opts = staff.map(function (s) {
           return '<option value="' + s.id + '">' + s.name + ' — ' + s.position + '</option>';
         }).join('');
-        document.getElementById('personSelect').innerHTML = opts;
-        document.getElementById('deputySelect').innerHTML = opts;
+        document.getElementById('personSelect').innerHTML = opts || '<option value="">—</option>';
+        document.getElementById('deputySelect').innerHTML = opts || '<option value="">—</option>';
       }
       function render() {
-        co = ISOAuth.getCompany(session.companyId);
-        var map = {}; (co.staff || []).forEach(function (s) { map[s.id] = s; });
-        var deps = (co.matrices && co.matrices.deputies) || [];
+        var co = ISOAuth.getCompany(session.companyId);
+        var map = {};
+        ((co && co.staff) || []).forEach(function (s) { map[s.id] = s; });
+        var deps = (co && co.matrices && co.matrices.deputies) || [];
         document.querySelector('#tbl tbody').innerHTML = deps.map(function (d, i) {
-          var p = map[d.personId], dep = map[d.deputyId];
-          return '<tr><td>' + (p && p.name || '?') + '</td><td>' + (p && p.position || '') +
-            '</td><td>' + (dep && dep.name || '?') + '</td><td>' + (dep && dep.position || '') +
-            '</td><td><button data-i="' + i + '" style="color:#dc2626">حذف</button></td></tr>';
-        }).join('') || '<tr><td colspan="5">خالی</td></tr>';
+          var p = map[d.personId], de = map[d.deputyId];
+          return '<tr><td>' + (p && p.name || '—') + '</td><td>' + (p && p.position || '—') +
+            '</td><td>' + (de && de.name || '—') + '</td><td>' + (de && de.position || '—') +
+            '</td><td><button type="button" data-i="' + i + '" style="color:#dc2626">حذف</button></td></tr>';
+        }).join('') || '<tr><td colspan="5">هنوز جانشینی ثبت نشده</td></tr>';
         document.querySelectorAll('[data-i]').forEach(function (btn) {
           btn.onclick = async function () {
-            var i = +btn.getAttribute('data-i');
-            var list = ((ISOAuth.getCompany(session.companyId).matrices || {}).deputies || []).slice();
-            list.splice(i, 1);
-            await ISOAuth.saveMatrices(session.companyId, { deputies: list });
-            render();
+            var co2 = ISOAuth.getCompany(session.companyId);
+            var deps2 = ((co2.matrices && co2.matrices.deputies) || []).slice();
+            deps2.splice(+btn.getAttribute('data-i'), 1);
+            try {
+              await ISOAuth.saveMatrices(session.companyId, { deputies: deps2 });
+              await ISOAuth.refresh();
+              fill(); render();
+            } catch (e) {
+              msg.hidden = false; msg.style.color = '#dc2626'; msg.textContent = e.message;
+            }
           };
         });
       }
       document.getElementById('depForm').onsubmit = async function (e) {
         e.preventDefault();
-        var fd = new FormData(e.target);
-        var personId = fd.get('personId'), deputyId = fd.get('deputyId');
-        if (personId === deputyId) return alert('فرد و جانشین یکسان نباشند');
-        co = ISOAuth.getCompany(session.companyId);
-        var deps = ((co.matrices || {}).deputies || []).slice();
-        deps.push({ personId: personId, deputyId: deputyId });
-        await ISOAuth.saveMatrices(session.companyId, { deputies: deps });
-        render();
+        var fd = Object.fromEntries(new FormData(e.target));
+        if (fd.personId === fd.deputyId) {
+          msg.hidden = false; msg.style.color = '#dc2626'; msg.textContent = 'فرد و جانشین نباید یک نفر باشند';
+          return;
+        }
+        var co = ISOAuth.getCompany(session.companyId);
+        var deps = ((co.matrices && co.matrices.deputies) || []).slice();
+        deps.push({ personId: fd.personId, deputyId: fd.deputyId });
+        try {
+          await ISOAuth.saveMatrices(session.companyId, { deputies: deps });
+          await ISOAuth.refresh();
+          msg.hidden = false; msg.style.color = '#059669'; msg.textContent = 'ثبت شد';
+          fill(); render();
+        } catch (err) {
+          msg.hidden = false; msg.style.color = '#dc2626'; msg.textContent = err.message;
+        }
       };
       fill(); render();
     });
