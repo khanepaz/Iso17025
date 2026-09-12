@@ -1,1 +1,1 @@
-{"version": "NACI-ISO17025", "sections": ["الزامات عمومی", "الزامات ساختاری", "الزامات منابع", "الزامات فرآیندی", "الزامات سیستم مدیریت"], "count": 319}
+{"version": "NACI-ISO17025", "count": 319, "files": ["naci-part-1.json", "naci-part-2.json", "naci-part-3.json", "naci-part-4a.json", "naci-part-4b.json", "naci-part-5.json"]}
