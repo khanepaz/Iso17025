@@ -1,11 +1,12 @@
 [build]
   publish = "."
-  # اگر بعداً از framework یا build استفاده کردید اینجا تنظیم کنید
+  functions = "netlify/functions"
 
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+[functions]
+  node_bundler = "esbuild"
 
-[forms]
-  # فرم تماس آماده است — فقط attribute netlify را به form اضافه کنید
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
