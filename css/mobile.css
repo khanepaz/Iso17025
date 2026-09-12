@@ -1,0 +1,49 @@
+/* ===== Mobile UX overhaul (public guide + shared) ===== */
+@media (max-width: 768px) {
+  :root { --header-h: 56px; }
+  body { font-size: 14.5px; line-height: 1.65; }
+  .container { padding: 0 12px; }
+  .logo { font-size: 0.95rem; gap: 6px; }
+  .logo-icon { font-size: 1.25rem; }
+  .hero { padding: calc(var(--header-h) + 20px) 0 40px !important; min-height: auto !important; }
+  .hero h1 { font-size: 1.45rem !important; line-height: 1.35; }
+  .hero p, .hero-desc { font-size: 0.9rem !important; }
+  .hero-stats { gap: 12px !important; flex-wrap: wrap; }
+  .hero-stats > div { min-width: 70px; }
+  .stat-num { font-size: 1.25rem !important; }
+  .stat-label { font-size: 0.7rem !important; }
+  .btn, .btn-primary, .btn-outline { padding: 10px 16px !important; font-size: 0.85rem !important; }
+  .section { padding: 36px 0 !important; }
+  .section-title { font-size: 1.25rem !important; }
+  .section-sub { font-size: 0.88rem !important; }
+  .feature-card, .card { padding: 16px 14px !important; }
+  .feature-card h3, .card h3 { font-size: 0.95rem !important; }
+  .feature-card p, .card p { font-size: 0.82rem !important; }
+  .clause-card { margin-bottom: 10px; }
+  .clause-header { padding: 12px !important; gap: 10px !important; }
+  .clause-num { width: 36px !important; height: 36px !important; font-size: 0.95rem !important; }
+  .clause-title { font-size: 0.9rem !important; }
+  .clause-meta { font-size: 0.75rem !important; }
+  .sub-clause { padding: 12px !important; }
+  .sub-header h4 { font-size: 0.85rem !important; }
+  .sub-body, .sub-clause p, .sub-clause li { font-size: 0.82rem !important; }
+  .check-item { padding: 8px 10px !important; font-size: 0.8rem !important; gap: 8px !important; }
+  .check-item input { width: 16px; height: 16px; }
+  .docs-table-wrapper, .table-wrap { margin: 0 -4px; border-radius: 8px; }
+  .docs-table th, .docs-table td { padding: 8px 10px !important; font-size: 0.78rem !important; }
+  .progress-panel { padding: 12px 14px !important; }
+  .progress-info { font-size: 0.85rem !important; }
+  .forms-grid { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+  .form-card { padding: 14px 10px !important; }
+  .form-card h3 { font-size: 0.82rem !important; }
+  .form-card p { font-size: 0.72rem !important; }
+  .nav-link { padding: 12px 14px !important; font-size: 0.92rem !important; }
+}
+@media (max-width: 400px) {
+  .forms-grid { grid-template-columns: 1fr !important; }
+  .hero h1 { font-size: 1.25rem !important; }
+}
+@media (hover: none) and (pointer: coarse) {
+  .nav-link, .btn, .module-card, .status-btn, .check-item { min-height: 40px; }
+  a, button { -webkit-tap-highlight-color: rgba(15, 76, 129, 0.12); }
+}
