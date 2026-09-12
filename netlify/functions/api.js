@@ -1,5 +1,5 @@
 /**
- * Netlify Function - ISO17025 users + NACI checklist
+ * Netlify Function - ISO17025 users/companies JSON + checklist
  */
 const OWNER = process.env.GITHUB_OWNER || 'khanepaz';
 const REPO = process.env.GITHUB_REPO || 'Iso17025';
@@ -63,20 +63,55 @@ async function githubPutFile(data, sha, message) {
     },
     body: JSON.stringify(body)
   });
+  if (res.status === 409) {
+    const err = new Error('SHA_CONFLICT');
+    err.code = 'SHA_CONFLICT';
+    throw err;
+  }
   if (!res.ok) throw new Error('GitHub PUT failed: ' + res.status + ' ' + (await res.text()));
   return res.json();
+}
+
+async function withWrite(mutator, message) {
+  let lastErr;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const { data, sha } = await githubGetFile();
+    if (!data.users) data.users = [];
+    if (!data.companies) data.companies = [];
+    defaultAdmin(data);
+    const result = mutator(data);
+    if (result && result.error) return result;
+    try {
+      await githubPutFile(data, sha, message);
+      return { ok: true, data: data, extra: result && result.extra };
+    } catch (e) {
+      lastErr = e;
+      if (e.code !== 'SHA_CONFLICT' && String(e.message || e).indexOf('SHA_CONFLICT') === -1) throw e;
+    }
+  }
+  throw lastErr || new Error('write failed after retries');
 }
 
 function defaultAdmin(data) {
   if (!data.users) data.users = [];
   if (!data.companies) data.companies = [];
-  if (!data.users.some(u => u.username === 'admin')) {
+  if (!data.users.some(function (u) { return u.username === 'admin'; })) {
     data.users.unshift({
       id: 'admin-001', username: 'admin', password: 'Admin@17025',
       role: 'admin', companyId: null, createdAt: new Date().toISOString()
     });
   }
   return data;
+}
+
+function cleanStaff(staff) {
+  const s = Object.assign({}, staff || {});
+  if (!s.id || String(s.id).trim() === '') delete s.id;
+  s.name = String(s.name || '').trim();
+  s.position = String(s.position || '').trim();
+  s.education = String(s.education || '').trim();
+  s.role = s.role || 'technical';
+  return s;
 }
 
 exports.handler = async (event) => {
@@ -88,111 +123,173 @@ exports.handler = async (event) => {
       if (qs.checklist === '1') return json(200, { ok: true, checklist: loadChecklist() });
       const { data } = await githubGetFile();
       defaultAdmin(data);
-      return json(200, { ok: true, data });
+      return json(200, { ok: true, data: data });
     }
     if (event.httpMethod !== 'POST') return json(405, { ok: false, error: 'Method not allowed' });
     const body = JSON.parse(event.body || '{}');
     const action = body.action;
-    const { data, sha } = await githubGetFile();
-    defaultAdmin(data);
 
     if (action === 'createLabUser') {
       const p = body.payload || {};
       if (!p.username || !p.password) return json(400, { ok: false, error: 'username/password required' });
-      if (data.users.some(u => u.username === p.username)) return json(400, { ok: false, error: 'duplicate username' });
-      const companyId = 'co-' + Date.now();
-      data.companies.push({
-        id: companyId, name: p.companyName || '', address: p.address || '', phone: p.phone || '',
-        seniorManager: p.seniorManager || '', technicalManager: p.technicalManager || '',
-        logoDataUrl: '', staff: [], matrices: { deputies: [], raci: [] }, checklist: {},
-        setupComplete: false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
-      });
-      data.users.push({
-        id: 'user-' + Date.now(), username: p.username, password: p.password,
-        role: 'lab', companyId, createdAt: new Date().toISOString()
-      });
-      await githubPutFile(data, sha, 'add lab user ' + p.username);
+      const r = await withWrite(function (data) {
+        if (data.users.some(function (u) { return u.username === p.username; })) {
+          return { error: { status: 400, body: { ok: false, error: 'duplicate username' } } };
+        }
+        const companyId = 'co-' + Date.now();
+        data.companies.push({
+          id: companyId, name: p.companyName || '', address: p.address || '', phone: p.phone || '',
+          seniorManager: p.seniorManager || '', technicalManager: p.technicalManager || '',
+          logoDataUrl: '', staff: [], matrices: { deputies: [], raci: [] }, checklist: {},
+          setupComplete: false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+        });
+        data.users.push({
+          id: 'user-' + Date.now(), username: p.username, password: p.password,
+          role: 'lab', companyId: companyId, createdAt: new Date().toISOString()
+        });
+        return {};
+      }, 'add lab user ' + p.username);
+      if (r.error) return json(r.error.status, r.error.body);
       return json(200, { ok: true });
     }
+
     if (action === 'updateLabUser') {
       const p = body.payload || {};
-      const u = data.users.find(x => x.username === p.username && x.role === 'lab');
-      if (!u) return json(404, { ok: false, error: 'user not found' });
-      if (p.password && p.password.length >= 4) u.password = p.password;
-      const co = data.companies.find(c => c.id === u.companyId);
-      if (co) {
-        if (p.companyName != null) co.name = p.companyName;
-        if (p.address != null) co.address = p.address;
-        if (p.phone != null) co.phone = p.phone;
-        if (p.seniorManager != null) co.seniorManager = p.seniorManager;
-        if (p.technicalManager != null) co.technicalManager = p.technicalManager;
-        co.updatedAt = new Date().toISOString();
-      }
-      await githubPutFile(data, sha, 'update lab user');
+      const r = await withWrite(function (data) {
+        const u = data.users.find(function (x) { return x.username === p.username && x.role === 'lab'; });
+        if (!u) return { error: { status: 404, body: { ok: false, error: 'user not found' } } };
+        if (p.password && p.password.length >= 4) u.password = p.password;
+        const co = data.companies.find(function (c) { return c.id === u.companyId; });
+        if (co) {
+          if (p.companyName != null) co.name = p.companyName;
+          if (p.address != null) co.address = p.address;
+          if (p.phone != null) co.phone = p.phone;
+          if (p.seniorManager != null) co.seniorManager = p.seniorManager;
+          if (p.technicalManager != null) co.technicalManager = p.technicalManager;
+          co.updatedAt = new Date().toISOString();
+        }
+        return {};
+      }, 'update lab user');
+      if (r.error) return json(r.error.status, r.error.body);
       return json(200, { ok: true });
     }
+
     if (action === 'deleteLabUser') {
-      const u = data.users.find(x => x.username === body.username && x.role === 'lab');
-      if (!u) return json(404, { ok: false, error: 'user not found' });
-      data.users = data.users.filter(x => x.username !== body.username);
-      if (u.companyId) data.companies = data.companies.filter(c => c.id !== u.companyId);
-      await githubPutFile(data, sha, 'delete lab user');
+      const r = await withWrite(function (data) {
+        const u = data.users.find(function (x) { return x.username === body.username && x.role === 'lab'; });
+        if (!u) return { error: { status: 404, body: { ok: false, error: 'user not found' } } };
+        data.users = data.users.filter(function (x) { return x.username !== body.username; });
+        data.companies = data.companies.filter(function (c) { return c.id !== u.companyId; });
+        return {};
+      }, 'delete lab user');
+      if (r.error) return json(r.error.status, r.error.body);
       return json(200, { ok: true });
     }
+
     if (action === 'updateCompany') {
-      const idx = data.companies.findIndex(c => c.id === body.companyId);
-      if (idx === -1) return json(404, { ok: false, error: 'company not found' });
-      const { id, ...safe } = body.updates || {};
-      data.companies[idx] = { ...data.companies[idx], ...safe, id: body.companyId, updatedAt: new Date().toISOString() };
-      await githubPutFile(data, sha, 'update company');
-      return json(200, { ok: true, company: data.companies[idx] });
+      const r = await withWrite(function (data) {
+        const idx = data.companies.findIndex(function (c) { return c.id === body.companyId; });
+        if (idx === -1) return { error: { status: 404, body: { ok: false, error: 'company not found' } } };
+        const updates = body.updates || {};
+        const protectedKeys = { id: 1, staff: 1, matrices: 1, checklist: 1, createdAt: 1 };
+        const safe = {};
+        Object.keys(updates).forEach(function (k) {
+          if (!protectedKeys[k]) safe[k] = updates[k];
+        });
+        if (Array.isArray(updates.staff)) safe.staff = updates.staff;
+        if (updates.matrices && typeof updates.matrices === 'object') {
+          safe.matrices = Object.assign({}, data.companies[idx].matrices || {}, updates.matrices);
+        }
+        data.companies[idx] = Object.assign({}, data.companies[idx], safe, {
+          id: body.companyId, updatedAt: new Date().toISOString()
+        });
+        return { extra: { company: data.companies[idx] } };
+      }, 'update company');
+      if (r.error) return json(r.error.status, r.error.body);
+      return json(200, { ok: true, company: r.extra && r.extra.company });
     }
+
     if (action === 'upsertStaff') {
-      const co = data.companies.find(c => c.id === body.companyId);
-      if (!co) return json(404, { ok: false, error: 'company not found' });
-      co.staff = co.staff || [];
-      const staff = body.staff || {};
-      if (!staff.id) { staff.id = 'st-' + Date.now(); co.staff.push(staff); }
-      else {
-        const i = co.staff.findIndex(s => s.id === staff.id);
-        if (i >= 0) co.staff[i] = { ...co.staff[i], ...staff }; else co.staff.push(staff);
-      }
-      co.updatedAt = new Date().toISOString();
-      await githubPutFile(data, sha, 'upsert staff');
-      return json(200, { ok: true, staff: co.staff });
+      const r = await withWrite(function (data) {
+        const co = data.companies.find(function (c) { return c.id === body.companyId; });
+        if (!co) return { error: { status: 404, body: { ok: false, error: 'company not found' } } };
+        co.staff = Array.isArray(co.staff) ? co.staff : [];
+        const staff = cleanStaff(body.staff);
+        if (!staff.name || !staff.position) {
+          return { error: { status: 400, body: { ok: false, error: 'نام و سمت الزامی است' } } };
+        }
+        if (!staff.id) {
+          staff.id = 'st-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+          co.staff.push(staff);
+        } else {
+          const i = co.staff.findIndex(function (s) { return s.id === staff.id; });
+          if (i >= 0) co.staff[i] = Object.assign({}, co.staff[i], staff);
+          else co.staff.push(staff);
+        }
+        co.updatedAt = new Date().toISOString();
+        return { extra: { staff: co.staff } };
+      }, 'upsert staff');
+      if (r.error) return json(r.error.status, r.error.body);
+      return json(200, { ok: true, staff: r.extra && r.extra.staff });
     }
+
     if (action === 'deleteStaff') {
-      const co = data.companies.find(c => c.id === body.companyId);
-      if (!co) return json(404, { ok: false, error: 'company not found' });
-      co.staff = (co.staff || []).filter(s => s.id !== body.staffId);
-      co.updatedAt = new Date().toISOString();
-      await githubPutFile(data, sha, 'delete staff');
-      return json(200, { ok: true, staff: co.staff });
+      const r = await withWrite(function (data) {
+        const co = data.companies.find(function (c) { return c.id === body.companyId; });
+        if (!co) return { error: { status: 404, body: { ok: false, error: 'company not found' } } };
+        co.staff = (co.staff || []).filter(function (s) { return s.id !== body.staffId; });
+        if (co.matrices && Array.isArray(co.matrices.deputies)) {
+          co.matrices.deputies = co.matrices.deputies.filter(function (d) {
+            return d.personId !== body.staffId && d.deputyId !== body.staffId;
+          });
+        }
+        co.updatedAt = new Date().toISOString();
+        return { extra: { staff: co.staff } };
+      }, 'delete staff');
+      if (r.error) return json(r.error.status, r.error.body);
+      return json(200, { ok: true, staff: r.extra && r.extra.staff });
     }
+
     if (action === 'saveMatrices') {
-      const co = data.companies.find(c => c.id === body.companyId);
-      if (!co) return json(404, { ok: false, error: 'company not found' });
-      co.matrices = { ...(co.matrices || {}), ...(body.matrices || {}) };
-      co.updatedAt = new Date().toISOString();
-      await githubPutFile(data, sha, 'save matrices');
+      const r = await withWrite(function (data) {
+        const co = data.companies.find(function (c) { return c.id === body.companyId; });
+        if (!co) return { error: { status: 404, body: { ok: false, error: 'company not found' } } };
+        co.matrices = Object.assign({}, co.matrices || {}, body.matrices || {});
+        co.updatedAt = new Date().toISOString();
+        return {};
+      }, 'save matrices');
+      if (r.error) return json(r.error.status, r.error.body);
       return json(200, { ok: true });
     }
+
     if (action === 'saveChecklist') {
-      const co = data.companies.find(c => c.id === body.companyId);
-      if (!co) return json(404, { ok: false, error: 'company not found' });
-      co.checklist = body.answers || {};
-      co.updatedAt = new Date().toISOString();
-      await githubPutFile(data, sha, 'save checklist');
+      const r = await withWrite(function (data) {
+        const co = data.companies.find(function (c) { return c.id === body.companyId; });
+        if (!co) return { error: { status: 404, body: { ok: false, error: 'company not found' } } };
+        co.checklist = body.answers || {};
+        co.updatedAt = new Date().toISOString();
+        return {};
+      }, 'save checklist');
+      if (r.error) return json(r.error.status, r.error.body);
       return json(200, { ok: true });
     }
+
     if (action === 'changePassword') {
-      const u = data.users.find(x => x.username === body.username);
-      if (!u || u.password !== body.oldPassword) return json(400, { ok: false, error: 'wrong password' });
-      if (!body.newPassword || body.newPassword.length < 6) return json(400, { ok: false, error: 'weak password' });
-      u.password = body.newPassword;
-      await githubPutFile(data, sha, 'change password');
+      const r = await withWrite(function (data) {
+        const u = data.users.find(function (x) { return x.username === body.username; });
+        if (!u || u.password !== body.oldPassword) {
+          return { error: { status: 400, body: { ok: false, error: 'wrong password' } } };
+        }
+        if (!body.newPassword || body.newPassword.length < 6) {
+          return { error: { status: 400, body: { ok: false, error: 'weak password' } } };
+        }
+        u.password = body.newPassword;
+        return {};
+      }, 'change password');
+      if (r.error) return json(r.error.status, r.error.body);
       return json(200, { ok: true });
     }
+
     return json(400, { ok: false, error: 'unknown action: ' + action });
   } catch (e) {
     return json(500, { ok: false, error: String(e.message || e) });
