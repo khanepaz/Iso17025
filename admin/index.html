@@ -63,14 +63,29 @@
         var r = await fetch('/.netlify/functions/api', { cache: 'no-store' });
         var t = await r.text();
         var box = document.getElementById('apiStatus');
-        if (!r.ok || t.trim().charAt(0) !== '{') {
+        var j = null;
+        try { j = JSON.parse(t); } catch (e) {}
+        if (!j) {
           box.style.display = 'block';
-          box.innerHTML = '<strong>توجه:</strong> Function بک‌اند در دسترس نیست. سایت را از <u>دامنه Netlify</u> باز کنید (نه github.io)، متغیر <code>GITHUB_TOKEN</code> را چک کنید و Redeploy بزنید. کد: ' + r.status;
+          box.style.background = '#fef2f2';
+          box.innerHTML = '<strong>توجه:</strong> Function پاسخ JSON نمی‌دهد (کد ' + r.status + '). از دامنه Netlify باز کنید و Redeploy بزنید.';
+        } else if (!j.ok) {
+          box.style.display = 'block';
+          box.style.background = '#fff7ed';
+          box.style.border = '1px solid #fed7aa';
+          var err = (j.error || '');
+          if (err.indexOf('401') !== -1 || err.indexOf('Bad credentials') !== -1) {
+            box.innerHTML = '<strong>توکن گیت‌هاب نامعتبر است.</strong> در Netlify متغیر <code>GITHUB_TOKEN</code> را با Personal Access Token جدید (Contents: Read and write روی ریپوی Iso17025) جایگزین کنید و Redeploy بزنید.<br><small style="color:#9a3412">' + err + '</small>';
+          } else if (err.indexOf('GITHUB_TOKEN') !== -1) {
+            box.innerHTML = '<strong>GITHUB_TOKEN تنظیم نشده.</strong> در Environment variables مقدار را بگذارید و Redeploy کنید.';
+          } else {
+            box.innerHTML = '<strong>خطای بک‌اند:</strong> ' + err;
+          }
         }
       } catch (e) {
         var box = document.getElementById('apiStatus');
         box.style.display = 'block';
-        box.innerHTML = '<strong>توجه:</strong> ارتباط با Function برقرار نشد. از دامنه Netlify استفاده کنید.';
+        box.innerHTML = '<strong>توجه:</strong> ارتباط با Function برقرار نشد. فیلترشکن را چک کنید.';
       }
 
       function renderUsers() {
