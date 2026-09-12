@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>فرم‌ها و PDF | ISO 17025</title>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/style.css" />
+  <link rel="stylesheet" href="../css/auth.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header-inner">
+      <div class="app-brand">🔬 فرم‌ها و مستندات PDF</div>
+      <div class="app-user"><button onclick="ISOAuth.logout()">خروج</button></div>
+    </div>
+  </header>
+  <div id="appNav"></div>
+  <main class="app-main">
+    <div class="panel">
+      <h2>فرم‌های قابل دانلود</h2>
+      <p style="font-size:0.9rem;color:#64748b;margin-bottom:14px">فرم‌های خام استاندارد. برای نسخه با سربرگ شرکت به فرم شخصی‌سازی‌شده بروید.</p>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>کد</th><th>عنوان</th><th>دانلود</th></tr></thead>
+          <tbody id="formsBody"></tbody>
+        </table>
+      </div>
+      <p style="margin-top:16px">
+        <a class="btn btn-primary" href="branded-forms.html">فرم با نام و لوگوی شرکت</a>
+      </p>
+    </div>
+  </main>
+  <script src="../js/auth.js"></script>
+  <script src="../js/nav.js"></script>
+  <script>
+    var FORMS = [
+      { code: 'F-01', title: 'خط‌مشی بی‌طرفی', file: 'F-01-Impartiality-Policy.pdf' },
+      { code: 'F-02', title: 'تعهدنامه بی‌طرفی کارکنان', file: 'F-02-Staff-Impartiality-Declaration.pdf' },
+      { code: 'F-03', title: 'تعهدنامه محرمانگی', file: 'F-03-Confidentiality-Agreement.pdf' },
+      { code: 'F-04', title: 'ارزیابی ریسک بی‌طرفی', file: 'F-04-Impartiality-Risk-Assessment.pdf' },
+      { code: 'F-05', title: 'بازنگری قرارداد / درخواست', file: 'F-05-Contract-Review.pdf' },
+      { code: 'F-06', title: 'دریافت قلم آزمون', file: 'F-06-Item-Receipt.pdf' },
+      { code: 'F-07', title: 'کار نامنطبق', file: 'F-07-Nonconforming-Work.pdf' },
+      { code: 'F-08', title: 'ثبت شکایت', file: 'F-08-Complaint-Form.pdf' },
+      { code: 'F-09', title: 'اقدام اصلاحی', file: 'F-09-Corrective-Action.pdf' },
+      { code: 'F-10', title: 'ارزیابی شایستگی', file: 'F-10-Competence-Evaluation.pdf' }
+    ];
+    ISOAuth.initAuth().then(function () {
+      var s = ISOAuth.requireAuth(['lab', 'admin']);
+      if (!s) return;
+      renderAppNav('forms');
+      document.getElementById('formsBody').innerHTML = FORMS.map(function (f) {
+        return '<tr><td><code>' + f.code + '</code></td><td>' + f.title +
+          '</td><td><a href="../forms/' + f.file + '" target="_blank" rel="noopener">دانلود PDF</a></td></tr>';
+      }).join('');
+    });
+  </script>
+</body>
+</html>
