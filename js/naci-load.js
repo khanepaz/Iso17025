@@ -1,0 +1,1 @@
+window.loadNaciChecklist=function(){try{var s=(window.__NACI_B64||[]).join('');if(!s)return[];var json=decodeURIComponent(escape(atob(s)));return JSON.parse(json);}catch(e){console.error(e);return[];}};
