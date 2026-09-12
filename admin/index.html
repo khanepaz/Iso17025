@@ -12,21 +12,29 @@
   <header class="app-header">
     <div class="app-header-inner">
       <div class="app-brand">🔬 پنل مدیریت</div>
-      <div class="app-user"><span id="adminName"></span><button type="button" onclick="ISOAuth.logout()">خروج</button></div>
+      <div class="app-user">
+        <span id="adminName"></span>
+        <button type="button" onclick="ISOAuth.logout()">خروج</button>
+      </div>
     </div>
   </header>
   <main class="app-main">
+    <div class="panel" id="apiStatus" style="display:none;background:#fef2f2;border:1px solid #fecaca"></div>
     <div class="panel">
-      <h2>ایجاد دسترسی آزمایشگاه</h2>
+      <h2 id="formTitle">ایجاد دسترسی آزمایشگاه</h2>
       <form id="createUserForm" class="form-grid">
-        <div><label>نام شرکت *</label><input name="companyName" required /></div>
-        <div><label>تلفن</label><input name="phone" /></div>
-        <div class="full"><label>آدرس</label><input name="address" /></div>
-        <div><label>مدیر ارشد</label><input name="seniorManager" /></div>
-        <div><label>مدیر فنی</label><input name="technicalManager" /></div>
-        <div><label>نام کاربری *</label><input name="username" required autocomplete="off" /></div>
-        <div><label>رمز عبور اولیه *</label><input name="password" type="text" required autocomplete="off" /></div>
-        <div class="full"><button type="submit" class="btn btn-primary">ایجاد و ذخیره در سرور</button></div>
+        <input type="hidden" name="mode" id="formMode" value="create" />
+        <div><label>نام شرکت *</label><input name="companyName" id="fCompany" required /></div>
+        <div><label>تلفن</label><input name="phone" id="fPhone" /></div>
+        <div class="full"><label>آدرس</label><input name="address" id="fAddress" /></div>
+        <div><label>مدیر ارشد</label><input name="seniorManager" id="fSenior" /></div>
+        <div><label>مدیر فنی</label><input name="technicalManager" id="fTech" /></div>
+        <div><label>نام کاربری *</label><input name="username" id="fUser" required autocomplete="off" /></div>
+        <div><label>رمز عبور <span id="pwHint">*</span></label><input name="password" id="fPass" type="text" autocomplete="off" /></div>
+        <div class="full">
+          <button type="submit" class="btn btn-primary" id="submitBtn">ایجاد و ذخیره در سرور</button>
+          <button type="button" class="btn btn-outline" id="cancelEdit" style="display:none;margin-right:8px;color:#0f4c81;border-color:#0f4c81">انصراف</button>
+        </div>
       </form>
       <p id="createMsg" style="margin-top:12px;font-size:0.9rem" hidden></p>
     </div>
@@ -34,7 +42,11 @@
       <h2>آزمایشگاه‌های ثبت‌شده</h2>
       <div class="table-wrap">
         <table class="data-table" id="usersTable">
-          <thead><tr><th>نام کاربری</th><th>شرکت</th><th>مدیر فنی</th><th>وضعیت</th><th>تاریخ</th></tr></thead>
+          <thead>
+            <tr>
+              <th>نام کاربری</th><th>شرکت</th><th>مدیر فنی</th><th>وضعیت</th><th>تاریخ</th><th>عملیات</th>
+            </tr>
+          </thead>
           <tbody></tbody>
         </table>
       </div>
@@ -42,35 +54,124 @@
   </main>
   <script src="../js/auth.js"></script>
   <script>
-    ISOAuth.initAuth().then(function () {
+    ISOAuth.initAuth().then(async function () {
       var session = ISOAuth.requireAuth(['admin']);
       if (!session) return;
       document.getElementById('adminName').textContent = session.username;
+
+      try {
+        var r = await fetch('/.netlify/functions/api', { cache: 'no-store' });
+        var t = await r.text();
+        var box = document.getElementById('apiStatus');
+        if (!r.ok || t.trim().charAt(0) !== '{') {
+          box.style.display = 'block';
+          box.innerHTML = '<strong>توجه:</strong> Function بک‌اند در دسترس نیست. سایت را از <u>دامنه Netlify</u> باز کنید (نه github.io)، متغیر <code>GITHUB_TOKEN</code> را چک کنید و Redeploy بزنید. کد: ' + r.status;
+        }
+      } catch (e) {
+        var box = document.getElementById('apiStatus');
+        box.style.display = 'block';
+        box.innerHTML = '<strong>توجه:</strong> ارتباط با Function برقرار نشد. از دامنه Netlify استفاده کنید.';
+      }
+
       function renderUsers() {
         var list = ISOAuth.listLabUsers();
         document.querySelector('#usersTable tbody').innerHTML = list.map(function (u) {
-          return '<tr><td><code>' + u.username + '</code></td><td>' + (u.company && u.company.name || '—') +
-            '</td><td>' + (u.company && u.company.technicalManager || '—') +
-            '</td><td>' + (u.company && u.company.setupComplete ? '✅' : '⏳') +
-            '</td><td>' + new Date(u.createdAt).toLocaleDateString('fa-IR') + '</td></tr>';
-        }).join('') || '<tr><td colspan="5">هنوز آزمایشگاهی ثبت نشده</td></tr>';
+          return '<tr>' +
+            '<td><code>' + u.username + '</code></td>' +
+            '<td>' + (u.company && u.company.name || '—') + '</td>' +
+            '<td>' + (u.company && u.company.technicalManager || '—') + '</td>' +
+            '<td>' + (u.company && u.company.setupComplete ? '✅' : '⏳') + '</td>' +
+            '<td>' + new Date(u.createdAt).toLocaleDateString('fa-IR') + '</td>' +
+            '<td style="white-space:nowrap">' +
+              '<button type="button" class="btn-edit" data-user="' + u.username + '">ویرایش</button> ' +
+              '<button type="button" class="btn-del" data-user="' + u.username + '" style="color:#dc2626">حذف</button>' +
+            '</td></tr>';
+        }).join('') || '<tr><td colspan="6">هنوز آزمایشگاهی ثبت نشده</td></tr>';
+
+        document.querySelectorAll('.btn-edit').forEach(function (btn) {
+          btn.onclick = function () {
+            var u = ISOAuth.listLabUsers().find(function (x) { return x.username === btn.getAttribute('data-user'); });
+            if (!u) return;
+            document.getElementById('formMode').value = 'edit';
+            document.getElementById('formTitle').textContent = 'ویرایش آزمایشگاه';
+            document.getElementById('submitBtn').textContent = 'ذخیره تغییرات';
+            document.getElementById('cancelEdit').style.display = 'inline-flex';
+            document.getElementById('fUser').value = u.username;
+            document.getElementById('fUser').readOnly = true;
+            document.getElementById('fPass').value = '';
+            document.getElementById('fPass').required = false;
+            document.getElementById('pwHint').textContent = '(خالی = بدون تغییر)';
+            document.getElementById('fCompany').value = (u.company && u.company.name) || '';
+            document.getElementById('fPhone').value = (u.company && u.company.phone) || '';
+            document.getElementById('fAddress').value = (u.company && u.company.address) || '';
+            document.getElementById('fSenior').value = (u.company && u.company.seniorManager) || '';
+            document.getElementById('fTech').value = (u.company && u.company.technicalManager) || '';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          };
+        });
+
+        document.querySelectorAll('.btn-del').forEach(function (btn) {
+          btn.onclick = async function () {
+            var un = btn.getAttribute('data-user');
+            if (!confirm('حذف کاربر «' + un + '» و تمام داده‌های شرکت؟')) return;
+            var msg = document.getElementById('createMsg');
+            msg.hidden = false;
+            try {
+              await ISOAuth.deleteLabUser(un);
+              msg.style.color = '#059669';
+              msg.textContent = 'حذف شد';
+              renderUsers();
+            } catch (err) {
+              msg.style.color = '#dc2626';
+              msg.textContent = err.message || String(err);
+            }
+          };
+        });
       }
+
+      document.getElementById('cancelEdit').onclick = function () {
+        document.getElementById('createUserForm').reset();
+        document.getElementById('formMode').value = 'create';
+        document.getElementById('formTitle').textContent = 'ایجاد دسترسی آزمایشگاه';
+        document.getElementById('submitBtn').textContent = 'ایجاد و ذخیره در سرور';
+        document.getElementById('fUser').readOnly = false;
+        document.getElementById('fPass').required = true;
+        document.getElementById('pwHint').textContent = '*';
+        this.style.display = 'none';
+      };
+
       document.getElementById('createUserForm').onsubmit = async function (e) {
         e.preventDefault();
         var payload = Object.fromEntries(new FormData(e.target));
+        var mode = payload.mode;
+        delete payload.mode;
         var msg = document.getElementById('createMsg');
         msg.hidden = false;
         try {
-          await ISOAuth.createLabUser(payload);
-          msg.style.color = '#059669';
-          msg.textContent = 'ایجاد شد و در GitHub ذخیره شد — یوزر: ' + payload.username;
-          e.target.reset();
+          if (mode === 'edit') {
+            if (!payload.password) delete payload.password;
+            await ISOAuth.updateLabUser(payload);
+            msg.style.color = '#059669';
+            msg.textContent = 'ویرایش ذخیره شد: ' + payload.username;
+            document.getElementById('cancelEdit').click();
+          } else {
+            if (!payload.password) {
+              msg.style.color = '#dc2626';
+              msg.textContent = 'رمز عبور برای ایجاد کاربر الزامی است';
+              return;
+            }
+            await ISOAuth.createLabUser(payload);
+            msg.style.color = '#059669';
+            msg.textContent = 'ایجاد شد و در GitHub ذخیره شد — یوزر: ' + payload.username;
+            e.target.reset();
+          }
           renderUsers();
         } catch (err) {
           msg.style.color = '#dc2626';
           msg.textContent = err.message || String(err);
         }
       };
+
       renderUsers();
     });
   </script>
