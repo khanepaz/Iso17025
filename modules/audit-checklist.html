@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>چک‌لیست ممیزی NACI | ISO 17025</title>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/style.css" />
+  <link rel="stylesheet" href="../css/auth.css" />
+  <style>
+    .audit-toolbar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:14px; }
+    .audit-toolbar select, .audit-toolbar input { padding:8px 10px; border:1px solid #cbd5e1; border-radius:8px; font-family:inherit; }
+    .audit-progress { height:10px; background:#e2e8f0; border-radius:99px; overflow:hidden; margin:10px 0 16px; }
+    .audit-progress > span { display:block; height:100%; background:linear-gradient(90deg,#0f4c81,#14b8a6); transition:width .3s; }
+    .audit-item { border:1px solid #e2e8f0; border-radius:12px; padding:14px; margin-bottom:10px; background:#fff; }
+    .audit-item.sub { margin-right:18px; border-style:dashed; background:#f8fafc; }
+    .audit-item .clause { display:inline-block; background:#e0f2fe; color:#0369a1; font-size:0.75rem; font-weight:700; padding:2px 8px; border-radius:6px; margin-left:8px; }
+    .audit-item .qtext { font-size:0.92rem; line-height:1.7; margin:8px 0 10px; color:#1e293b; }
+    .audit-actions { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+    .status-btn { border:1px solid #cbd5e1; background:#fff; border-radius:8px; padding:5px 10px; cursor:pointer; font-size:0.8rem; font-family:inherit; }
+    .status-btn.on-yes { background:#dcfce7; border-color:#86efac; color:#166534; }
+    .status-btn.on-no { background:#fee2e2; border-color:#fca5a5; color:#991b1b; }
+    .status-btn.on-na { background:#f1f5f9; border-color:#94a3b8; color:#475569; }
+    .status-btn.on-partial { background:#fef9c3; border-color:#fde047; color:#854d0e; }
+    .audit-item textarea { width:100%; min-height:64px; margin-top:8px; border:1px solid #cbd5e1; border-radius:8px; padding:8px; font-family:inherit; font-size:0.85rem; resize:vertical; }
+    .section-head { margin:22px 0 10px; padding:10px 14px; background:#0f4c81; color:#fff; border-radius:10px; font-weight:700; }
+    .sticky-save { position:sticky; bottom:12px; z-index:20; text-align:center; }
+    .sticky-save button { box-shadow:0 8px 24px rgba(15,76,129,.35); }
+    .stat-pills span { display:inline-block; margin-left:8px; font-size:0.8rem; padding:3px 8px; border-radius:99px; background:#f1f5f9; }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header-inner">
+      <div class="app-brand">🔬 چک‌لیست ممیزی NACI</div>
+      <div class="app-user"><span id="userLabel"></span><button onclick="ISOAuth.logout()">خروج</button></div>
+    </div>
+  </header>
+  <div id="appNav"></div>
+  <main class="app-main">
+    <div class="panel">
+      <h2>چک‌لیست ممیزی ISO/IEC 17025 (مرکز ملی تأیید صلاحیت ایران)</h2>
+      <p style="font-size:0.9rem;color:#64748b;margin-bottom:12px">
+        برای هر ردیف وضعیت انطباق را مشخص کنید و شواهد عینی / شماره مستند / توضیح بنویسید.
+        پاسخ‌ها فقط برای شرکت شما ذخیره می‌شود.
+      </p>
+      <div class="audit-toolbar">
+        <select id="filterSection"><option value="">همه بندها</option></select>
+        <select id="filterStatus">
+          <option value="">همه وضعیت‌ها</option>
+          <option value="empty">بدون پاسخ</option>
+          <option value="yes">انطباق</option>
+          <option value="partial">انطباق جزئی</option>
+          <option value="no">عدم انطباق</option>
+          <option value="na">کاربرد ندارد</option>
+        </select>
+        <input type="search" id="searchQ" placeholder="جستجو در متن الزام..." style="min-width:180px;flex:1" />
+      </div>
+      <div class="stat-pills" id="stats"></div>
+      <div class="audit-progress"><span id="progBar" style="width:0%"></span></div>
+      <div id="list"></div>
+      <div class="sticky-save">
+        <button type="button" class="btn btn-primary" id="saveAll">💾 ذخیره همه پاسخ‌ها</button>
+        <p id="saveMsg" style="margin-top:8px;font-size:0.85rem" hidden></p>
+      </div>
+    </div>
+  </main>
+  <script src="../js/auth.js"></script>
+  <script src="../js/nav.js"></script>
+  <script>
+    var ITEMS = [];
+    var answers = {};
+    var session, companyId;
+
+    function loadAnswers() {
+      var co = ISOAuth.getCompany(companyId);
+      answers = Object.assign({}, (co && co.checklist) || {});
+    }
+
+    function counts() {
+      var total = ITEMS.length, yes=0, no=0, partial=0, na=0, empty=0;
+      ITEMS.forEach(function (it) {
+        var s = (answers[it.id] && answers[it.id].status) || '';
+        if (s === 'yes') yes++;
+        else if (s === 'no') no++;
+        else if (s === 'partial') partial++;
+        else if (s === 'na') na++;
+        else empty++;
+      });
+      return { total: total, yes: yes, no: no, partial: partial, na: na, empty: empty, done: total - empty };
+    }
+
+    function updateStats() {
+      var c = counts();
+      var pct = c.total ? Math.round((c.done / c.total) * 100) : 0;
+      document.getElementById('progBar').style.width = pct + '%';
+      document.getElementById('stats').innerHTML =
+        '<span>پاسخ‌داده‌شده: <b>' + c.done + '/' + c.total + '</b> (' + pct + '%)</span>' +
+        '<span style="background:#dcfce7">انطباق: ' + c.yes + '</span>' +
+        '<span style="background:#fef9c3">جزئی: ' + c.partial + '</span>' +
+        '<span style="background:#fee2e2">عدم: ' + c.no + '</span>' +
+        '<span style="background:#f1f5f9">N/A: ' + c.na + '</span>';
+    }
+
+    function setStatus(id, status) {
+      if (!answers[id]) answers[id] = { status: '', evidence: '' };
+      answers[id].status = status;
+      updateStats();
+      render();
+    }
+
+    function setEvidence(id, val) {
+      if (!answers[id]) answers[id] = { status: '', evidence: '' };
+      answers[id].evidence = val;
+    }
+
+    function render() {
+      var sec = document.getElementById('filterSection').value;
+      var st = document.getElementById('filterStatus').value;
+      var q = (document.getElementById('searchQ').value || '').trim();
+      var html = '';
+      var lastSec = '';
+      ITEMS.forEach(function (it) {
+        var a = answers[it.id] || { status: '', evidence: '' };
+        if (sec && it.section !== sec) return;
+        if (st === 'empty' && a.status) return;
+        if (st && st !== 'empty' && a.status !== st) return;
+        if (q && it.text.indexOf(q) === -1 && it.clause.indexOf(q) === -1) return;
+        if (it.section !== lastSec) {
+          lastSec = it.section;
+          html += '<div class="section-head">' + lastSec + '</div>';
+        }
+        html += '<div class="audit-item' + (it.isSub ? ' sub' : '') + '" data-id="' + it.id + '">' +
+          '<span class="clause">' + (it.clause || '—') + '</span>' +
+          '<div class="qtext">' + it.text + '</div>' +
+          '<div class="audit-actions">' +
+          '<button type="button" class="status-btn' + (a.status==='yes'?' on-yes':'') + '" data-s="yes">✓ انطباق</button>' +
+          '<button type="button" class="status-btn' + (a.status==='partial'?' on-partial':'') + '" data-s="partial">◐ جزئی</button>' +
+          '<button type="button" class="status-btn' + (a.status==='no'?' on-no':'') + '" data-s="no">✗ عدم انطباق</button>' +
+          '<button type="button" class="status-btn' + (a.status==='na'?' on-na':'') + '" data-s="na">— کاربرد ندارد</button>' +
+          '</div>' +
+          '<textarea placeholder="شواهد عینی، شماره مستند، توضیح..." data-ev="' + it.id + '">' +
+          (a.evidence || '').replace(/</g,'&lt;') + '</textarea></div>';
+      });
+      document.getElementById('list').innerHTML = html || '<p style="color:#64748b">موردی با این فیلتر نیست.</p>';
+      document.querySelectorAll('.audit-item').forEach(function (box) {
+        var id = box.getAttribute('data-id');
+        box.querySelectorAll('.status-btn').forEach(function (btn) {
+          btn.onclick = function () { setStatus(id, btn.getAttribute('data-s')); };
+        });
+        var ta = box.querySelector('textarea');
+        ta.oninput = function () { setEvidence(id, ta.value); };
+      });
+      updateStats();
+    }
+
+    ISOAuth.initAuth().then(async function () {
+      session = ISOAuth.requireAuth(['lab']);
+      if (!session) return;
+      companyId = session.companyId;
+      document.getElementById('userLabel').textContent = session.username;
+      renderAppNav('audit');
+      loadAnswers();
+
+      var cres = await fetch('/.netlify/functions/api?checklist=1');
+      var cj = await cres.json();
+      if (cj.ok && cj.checklist && cj.checklist.items) {
+        ITEMS = cj.checklist.items;
+      } else {
+        try {
+          var meta = await (await fetch('../data/naci-checklist-meta.json?t=' + Date.now())).json();
+          var parts = await Promise.all((meta.files || []).map(function (f) {
+            return fetch('../data/' + f + '?t=' + Date.now()).then(function (r) { return r.json(); });
+          }));
+          ITEMS = [];
+          parts.forEach(function (p) { ITEMS = ITEMS.concat(p.items || []); });
+        } catch (e) { ITEMS = []; }
+      }
+
+      var secs = [];
+      ITEMS.forEach(function (it) {
+        if (secs.indexOf(it.section) === -1) secs.push(it.section);
+      });
+      document.getElementById('filterSection').innerHTML =
+        '<option value="">همه بندها</option>' +
+        secs.map(function (s) { return '<option value="' + s + '">' + s + '</option>'; }).join('');
+
+      document.getElementById('filterSection').onchange = render;
+      document.getElementById('filterStatus').onchange = render;
+      document.getElementById('searchQ').oninput = render;
+
+      document.getElementById('saveAll').onclick = async function () {
+        var msg = document.getElementById('saveMsg');
+        msg.hidden = false;
+        try {
+          await ISOAuth.saveChecklist(companyId, answers);
+          msg.style.color = '#059669';
+          msg.textContent = 'ذخیره شد (' + counts().done + ' مورد پاسخ‌داده‌شده)';
+        } catch (e) {
+          msg.style.color = '#dc2626';
+          msg.textContent = e.message || String(e);
+        }
+      };
+
+      render();
+    });
+  </script>
+</body>
+</html>
