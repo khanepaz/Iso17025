@@ -6,6 +6,7 @@ const DEFAULT_ADMIN = {
   role: 'admin', companyId: null, createdAt: new Date().toISOString()
 };
 let _cache = null;
+
 function getSession() {
   try { return JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); } catch { return null; }
 }
@@ -15,10 +16,17 @@ function setSession(user) {
     id: user.id, username: user.username, role: user.role, companyId: user.companyId || null
   }));
 }
+
 async function apiGet() {
   try {
     const res = await fetch(API_URL, { cache: 'no-store' });
-    if (res.ok) { const j = await res.json(); if (j.ok && j.data) return j.data; }
+    const text = await res.text();
+    if (res.ok) {
+      try {
+        const j = JSON.parse(text);
+        if (j.ok && j.data) return j.data;
+      } catch (e) {}
+    }
   } catch (e) {}
   try {
     const res = await fetch(FALLBACK_JSON + '?t=' + Date.now(), { cache: 'no-store' });
@@ -26,28 +34,51 @@ async function apiGet() {
   } catch (e) {}
   return { users: [DEFAULT_ADMIN], companies: [] };
 }
+
 async function apiPost(action, payload) {
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(Object.assign({ action: action }, payload || {}))
-  });
-  const j = await res.json().catch(function () { return { ok: false, error: 'پاسخ نامعتبر' }; });
-  if (!res.ok || !j.ok) throw new Error(j.error || 'خطای سرور');
+  let res;
+  try {
+    res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({ action: action }, payload || {}))
+    });
+  } catch (e) {
+    throw new Error('ارتباط با سرور برقرار نشد. آیا سایت را از دامنهٔ Netlify باز کرده‌اید؟');
+  }
+  const text = await res.text();
+  let j;
+  try {
+    j = JSON.parse(text);
+  } catch (e) {
+    if (res.status === 404) {
+      throw new Error('Function پیدا نشد (404). سایت را از آدرس Netlify باز کنید (نه github.io) و Redeploy بزنید.');
+    }
+    throw new Error('پاسخ سرور JSON نیست (کد ' + res.status + '). Function یا GITHUB_TOKEN را در Netlify بررسی کنید.');
+  }
+  if (!res.ok || !j.ok) {
+    throw new Error(j.error || ('خطای سرور ' + res.status));
+  }
   return j;
 }
+
 async function initAuth() {
   const data = await apiGet();
   if (!data.users) data.users = [];
   if (!data.companies) data.companies = [];
-  if (!data.users.some(function (u) { return u.username === 'admin'; })) data.users.unshift(Object.assign({}, DEFAULT_ADMIN));
+  if (!data.users.some(function (u) { return u.username === 'admin'; })) {
+    data.users.unshift(Object.assign({}, DEFAULT_ADMIN));
+  }
   _cache = data;
   return data;
 }
 function loadData() { return _cache || { users: [DEFAULT_ADMIN], companies: [] }; }
 async function refresh() { return initAuth(); }
+
 function login(username, password) {
-  const user = loadData().users.find(function (u) { return u.username === username && u.password === password; });
+  const user = loadData().users.find(function (u) {
+    return u.username === username && u.password === password;
+  });
   if (!user) return { ok: false, error: 'نام کاربری یا رمز عبور اشتباه است' };
   setSession(user);
   return { ok: true, user: user };
@@ -74,21 +105,58 @@ function getCompany(companyId) {
 function listLabUsers() {
   const data = loadData();
   return data.users.filter(function (u) { return u.role === 'lab'; }).map(function (u) {
-    return Object.assign({}, u, { company: data.companies.find(function (c) { return c.id === u.companyId; }) });
+    return Object.assign({}, u, {
+      company: data.companies.find(function (c) { return c.id === u.companyId; })
+    });
   });
 }
-async function createLabUser(payload) { const r = await apiPost('createLabUser', { payload: payload }); await refresh(); return r; }
-async function updateCompany(companyId, updates) { const r = await apiPost('updateCompany', { companyId: companyId, updates: updates }); await refresh(); return r; }
-async function upsertStaff(companyId, staff) { const r = await apiPost('upsertStaff', { companyId: companyId, staff: staff }); await refresh(); return r; }
-async function deleteStaff(companyId, staffId) { const r = await apiPost('deleteStaff', { companyId: companyId, staffId: staffId }); await refresh(); return r; }
-async function saveMatrices(companyId, matrices) { const r = await apiPost('saveMatrices', { companyId: companyId, matrices: matrices }); await refresh(); return r; }
-async function changePassword(username, oldPassword, newPassword) {
-  return apiPost('changePassword', { username: username, oldPassword: oldPassword, newPassword: newPassword });
+
+async function createLabUser(payload) {
+  const r = await apiPost('createLabUser', { payload: payload });
+  await refresh();
+  return r;
 }
+async function updateLabUser(payload) {
+  const r = await apiPost('updateLabUser', { payload: payload });
+  await refresh();
+  return r;
+}
+async function deleteLabUser(username) {
+  const r = await apiPost('deleteLabUser', { username: username });
+  await refresh();
+  return r;
+}
+async function updateCompany(companyId, updates) {
+  const r = await apiPost('updateCompany', { companyId: companyId, updates: updates });
+  await refresh();
+  return r;
+}
+async function upsertStaff(companyId, staff) {
+  const r = await apiPost('upsertStaff', { companyId: companyId, staff: staff });
+  await refresh();
+  return r;
+}
+async function deleteStaff(companyId, staffId) {
+  const r = await apiPost('deleteStaff', { companyId: companyId, staffId: staffId });
+  await refresh();
+  return r;
+}
+async function saveMatrices(companyId, matrices) {
+  const r = await apiPost('saveMatrices', { companyId: companyId, matrices: matrices });
+  await refresh();
+  return r;
+}
+async function changePassword(username, oldPassword, newPassword) {
+  return apiPost('changePassword', {
+    username: username, oldPassword: oldPassword, newPassword: newPassword
+  });
+}
+
 window.ISOAuth = {
   initAuth: initAuth, refresh: refresh, loadData: loadData, login: login, logout: logout,
   requireAuth: requireAuth, getSession: getSession, afterLoginRedirect: afterLoginRedirect,
   getCompany: getCompany, listLabUsers: listLabUsers, createLabUser: createLabUser,
+  updateLabUser: updateLabUser, deleteLabUser: deleteLabUser,
   updateCompany: updateCompany, upsertStaff: upsertStaff, deleteStaff: deleteStaff,
   saveMatrices: saveMatrices, changePassword: changePassword
 };
