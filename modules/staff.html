@@ -19,7 +19,7 @@
   <main class="app-main">
     <div class="panel">
       <h2 id="formTitle">افزودن پرسنل</h2>
-      <p style="font-size:0.85rem;color:#64748b;margin-bottom:10px">پرسنل در data/users.json ذخیره می‌شود و در جانشینان و نفرات شاخص استفاده می‌شود.</p>
+      <p id="coHint" style="font-size:0.85rem;color:#64748b;margin-bottom:10px"></p>
       <form id="staffForm" class="form-grid">
         <input type="hidden" id="staffId" value="" />
         <div><label>نام و نام خانوادگی *</label><input id="stName" required autocomplete="name" /></div>
@@ -54,11 +54,12 @@
   <script src="../js/auth.js"></script>
   <script src="../js/nav.js"></script>
   <script>
-    ISOAuth.initAuth().then(function () {
+    ISOAuth.initAuth().then(async function () {
       var session = ISOAuth.requireAuth(['lab']);
       if (!session) return;
       document.getElementById('userLabel').textContent = session.username;
       if (typeof renderAppNav === 'function') renderAppNav('staff');
+      try { await ISOAuth.refresh(); } catch (e) {}
       var roleMap = { management: 'مدیریت', technical: 'فنی', quality: 'کیفیت', support: 'پشتیبانی' };
       var msg = document.getElementById('msg');
       function showMsg(text, ok) {
@@ -68,20 +69,27 @@
       }
       function render() {
         var co = ISOAuth.getCompany(session.companyId);
-        if (!co) { showMsg('شرکت یافت نشد. دوباره وارد شوید.', false); return; }
-        var staff = co.staff || [];
+        if (!co) {
+          showMsg('شرکت یافت نشد. از دامنه Netlify وارد شوید.', false);
+          document.getElementById('coHint').textContent = 'خطا در بارگذاری شرکت';
+          return;
+        }
+        document.getElementById('coHint').textContent =
+          'شرکت: ' + (co.name || '—') + ' | داده از users.json';
+        var staff = Array.isArray(co.staff) ? co.staff : [];
         document.getElementById('count').textContent = staff.length;
         document.querySelector('#tbl tbody').innerHTML = staff.map(function (s) {
           return '<tr><td>' + (s.name || '') + '</td><td>' + (s.position || '') + '</td><td>' +
             (s.education || '—') + '</td><td>' + (roleMap[s.role] || s.role || '') + '</td><td>' +
             '<button type="button" class="btn-edit" data-id="' + s.id + '">ویرایش</button> ' +
             '<button type="button" class="btn-del" data-id="' + s.id + '" style="color:#dc2626">حذف</button></td></tr>';
-        }).join('') || '<tr><td colspan="5">هنوز پرسنلی ثبت نشده.</td></tr>';
+        }).join('') || '<tr><td colspan="5">هنوز پرسنلی ثبت نشده. از فرم بالا اضافه کنید.</td></tr>';
         document.querySelectorAll('.btn-del').forEach(function (btn) {
           btn.onclick = async function () {
             if (!confirm('حذف این نفر؟')) return;
             try {
               await ISOAuth.deleteStaff(session.companyId, btn.getAttribute('data-id'));
+              await ISOAuth.refresh();
               showMsg('حذف شد', true);
               render();
             } catch (err) { showMsg(err.message || String(err), false); }
