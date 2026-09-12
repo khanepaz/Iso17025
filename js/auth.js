@@ -44,21 +44,16 @@ async function apiPost(action, payload) {
       body: JSON.stringify(Object.assign({ action: action }, payload || {}))
     });
   } catch (e) {
-    throw new Error('ارتباط با سرور برقرار نشد. آیا سایت را از دامنهٔ Netlify باز کرده‌اید؟');
+    throw new Error('ارتباط با سرور برقرار نشد. از دامنه Netlify باز کنید.');
   }
   const text = await res.text();
   let j;
-  try {
-    j = JSON.parse(text);
-  } catch (e) {
-    if (res.status === 404) {
-      throw new Error('Function پیدا نشد (404). سایت را از آدرس Netlify باز کنید (نه github.io) و Redeploy بزنید.');
-    }
-    throw new Error('پاسخ سرور JSON نیست (کد ' + res.status + '). Function یا GITHUB_TOKEN را در Netlify بررسی کنید.');
+  try { j = JSON.parse(text); }
+  catch (e) {
+    if (res.status === 404) throw new Error('Function پیدا نشد (404). از دامنه Netlify استفاده کنید.');
+    throw new Error('پاسخ سرور JSON نیست (کد ' + res.status + ').');
   }
-  if (!res.ok || !j.ok) {
-    throw new Error(j.error || ('خطای سرور ' + res.status));
-  }
+  if (!res.ok || !j.ok) throw new Error(j.error || ('خطای سرور ' + res.status));
   return j;
 }
 
@@ -66,9 +61,7 @@ async function initAuth() {
   const data = await apiGet();
   if (!data.users) data.users = [];
   if (!data.companies) data.companies = [];
-  if (!data.users.some(function (u) { return u.username === 'admin'; })) {
-    data.users.unshift(Object.assign({}, DEFAULT_ADMIN));
-  }
+  if (!data.users.some(function (u) { return u.username === 'admin'; })) data.users.unshift(Object.assign({}, DEFAULT_ADMIN));
   _cache = data;
   return data;
 }
@@ -112,44 +105,31 @@ function listLabUsers() {
 }
 
 async function createLabUser(payload) {
-  const r = await apiPost('createLabUser', { payload: payload });
-  await refresh();
-  return r;
+  const r = await apiPost('createLabUser', { payload: payload }); await refresh(); return r;
 }
 async function updateLabUser(payload) {
-  const r = await apiPost('updateLabUser', { payload: payload });
-  await refresh();
-  return r;
+  const r = await apiPost('updateLabUser', { payload: payload }); await refresh(); return r;
 }
 async function deleteLabUser(username) {
-  const r = await apiPost('deleteLabUser', { username: username });
-  await refresh();
-  return r;
+  const r = await apiPost('deleteLabUser', { username: username }); await refresh(); return r;
 }
 async function updateCompany(companyId, updates) {
-  const r = await apiPost('updateCompany', { companyId: companyId, updates: updates });
-  await refresh();
-  return r;
+  const r = await apiPost('updateCompany', { companyId: companyId, updates: updates }); await refresh(); return r;
 }
 async function upsertStaff(companyId, staff) {
-  const r = await apiPost('upsertStaff', { companyId: companyId, staff: staff });
-  await refresh();
-  return r;
+  const r = await apiPost('upsertStaff', { companyId: companyId, staff: staff }); await refresh(); return r;
 }
 async function deleteStaff(companyId, staffId) {
-  const r = await apiPost('deleteStaff', { companyId: companyId, staffId: staffId });
-  await refresh();
-  return r;
+  const r = await apiPost('deleteStaff', { companyId: companyId, staffId: staffId }); await refresh(); return r;
 }
 async function saveMatrices(companyId, matrices) {
-  const r = await apiPost('saveMatrices', { companyId: companyId, matrices: matrices });
-  await refresh();
-  return r;
+  const r = await apiPost('saveMatrices', { companyId: companyId, matrices: matrices }); await refresh(); return r;
+}
+async function saveChecklist(companyId, answers) {
+  const r = await apiPost('saveChecklist', { companyId: companyId, answers: answers }); await refresh(); return r;
 }
 async function changePassword(username, oldPassword, newPassword) {
-  return apiPost('changePassword', {
-    username: username, oldPassword: oldPassword, newPassword: newPassword
-  });
+  return apiPost('changePassword', { username: username, oldPassword: oldPassword, newPassword: newPassword });
 }
 
 window.ISOAuth = {
@@ -158,5 +138,5 @@ window.ISOAuth = {
   getCompany: getCompany, listLabUsers: listLabUsers, createLabUser: createLabUser,
   updateLabUser: updateLabUser, deleteLabUser: deleteLabUser,
   updateCompany: updateCompany, upsertStaff: upsertStaff, deleteStaff: deleteStaff,
-  saveMatrices: saveMatrices, changePassword: changePassword
+  saveMatrices: saveMatrices, saveChecklist: saveChecklist, changePassword: changePassword
 };
