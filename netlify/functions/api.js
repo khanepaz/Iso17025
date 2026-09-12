@@ -10,8 +10,20 @@ const TOKEN = process.env.GITHUB_TOKEN;
 let CHECKLIST_CACHE = null;
 function loadChecklist() {
   if (CHECKLIST_CACHE) return CHECKLIST_CACHE;
-  try { CHECKLIST_CACHE = require('./checklist.json'); }
-  catch (e) { CHECKLIST_CACHE = { items: [] }; }
+  const items = [];
+  for (let i = 1; i <= 20; i++) {
+    try {
+      const part = require('./checklist/cl' + i + '.json');
+      if (part && part.items) items.push.apply(items, part.items);
+    } catch (e) {}
+  }
+  if (!items.length) {
+    try {
+      const one = require('./checklist.json');
+      if (one && one.items) items.push.apply(items, one.items);
+    } catch (e2) {}
+  }
+  CHECKLIST_CACHE = { items: items };
   return CHECKLIST_CACHE;
 }
 
