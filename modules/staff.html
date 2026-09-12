@@ -1,81 +1,146 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
-  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>پرسنل</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>مدیریت پرسنل | ISO 17025</title>
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/style.css" /><link rel="stylesheet" href="../css/auth.css" />
+  <link rel="stylesheet" href="../css/style.css" />
+  <link rel="stylesheet" href="../css/auth.css" />
 </head>
 <body>
-  <header class="app-header"><div class="app-header-inner">
-    <div class="app-brand"><a href="../dashboard.html" style="color:inherit">← داشبورد</a> | پرسنل</div>
-    <div class="app-user"><button onclick="ISOAuth.logout()">خروج</button></div>
-  </div></header>
+  <header class="app-header">
+    <div class="app-header-inner">
+      <div class="app-brand"><a href="../dashboard.html" style="color:inherit">← داشبورد</a> | پرسنل</div>
+      <div class="app-user"><span id="userLabel"></span> <button onclick="ISOAuth.logout()">خروج</button></div>
+    </div>
+  </header>
+  <div id="appNav"></div>
   <main class="app-main">
     <div class="panel">
       <h2 id="formTitle">افزودن پرسنل</h2>
+      <p style="font-size:0.85rem;color:#64748b;margin-bottom:10px">پرسنل در data/users.json ذخیره می‌شود و در جانشینان و نفرات شاخص استفاده می‌شود.</p>
       <form id="staffForm" class="form-grid">
-        <input type="hidden" name="id" id="staffId" />
-        <div><label>نام *</label><input name="name" required /></div>
-        <div><label>سمت *</label><input name="position" required /></div>
-        <div><label>مدرک</label><input name="education" /></div>
-        <div><label>نقش</label><select name="role"><option value="management">مدیریت</option><option value="technical" selected>فنی</option><option value="quality">کیفیت</option><option value="support">پشتیبانی</option></select></div>
-        <div class="full"><button type="submit" class="btn btn-primary">ذخیره</button>
-          <button type="button" id="cancelEdit" class="btn btn-outline" style="display:none;margin-right:8px;color:#0f4c81;border-color:#0f4c81">انصراف</button></div>
+        <input type="hidden" id="staffId" value="" />
+        <div><label>نام و نام خانوادگی *</label><input id="stName" required autocomplete="name" /></div>
+        <div><label>سمت *</label><input id="stPos" required /></div>
+        <div><label>مدرک تحصیلی</label><input id="stEdu" placeholder="مثال: کارشناسی شیمی" /></div>
+        <div>
+          <label>نقش سازمانی</label>
+          <select id="stRole">
+            <option value="management">مدیریت</option>
+            <option value="technical" selected>فنی</option>
+            <option value="quality">کیفیت</option>
+            <option value="support">پشتیبانی</option>
+          </select>
+        </div>
+        <div class="full">
+          <button type="submit" class="btn btn-primary" id="saveBtn">ذخیره پرسنل</button>
+          <button type="button" id="cancelEdit" class="btn btn-outline" style="display:none;margin-right:8px;color:#0f4c81;border-color:#0f4c81">انصراف</button>
+        </div>
       </form>
+      <p id="msg" style="margin-top:10px;font-size:0.9rem" hidden></p>
     </div>
-    <div class="panel"><h2>لیست</h2>
-      <div class="table-wrap"><table class="data-table" id="tbl">
-        <thead><tr><th>نام</th><th>سمت</th><th>مدرک</th><th>نقش</th><th>عملیات</th></tr></thead><tbody></tbody>
-      </table></div>
+    <div class="panel">
+      <h2>لیست پرسنل (<span id="count">0</span>)</h2>
+      <div class="table-wrap">
+        <table class="data-table" id="tbl">
+          <thead><tr><th>نام</th><th>سمت</th><th>مدرک</th><th>نقش</th><th>عملیات</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </div>
   </main>
   <script src="../js/auth.js"></script>
+  <script src="../js/nav.js"></script>
   <script>
     ISOAuth.initAuth().then(function () {
-      var session = ISOAuth.requireAuth(['lab']); if (!session) return;
+      var session = ISOAuth.requireAuth(['lab']);
+      if (!session) return;
+      document.getElementById('userLabel').textContent = session.username;
+      if (typeof renderAppNav === 'function') renderAppNav('staff');
       var roleMap = { management: 'مدیریت', technical: 'فنی', quality: 'کیفیت', support: 'پشتیبانی' };
+      var msg = document.getElementById('msg');
+      function showMsg(text, ok) {
+        msg.hidden = false;
+        msg.style.color = ok ? '#059669' : '#dc2626';
+        msg.textContent = text;
+      }
       function render() {
         var co = ISOAuth.getCompany(session.companyId);
-        document.querySelector('#tbl tbody').innerHTML = (co.staff || []).map(function (s) {
-          return '<tr><td>' + s.name + '</td><td>' + s.position + '</td><td>' + (s.education || '—') +
-            '</td><td>' + (roleMap[s.role] || s.role) +
-            '</td><td><button type="button" class="edit-btn" data-id="' + s.id + '">ویرایش</button> ' +
-            '<button type="button" data-del="' + s.id + '" style="color:#dc2626">حذف</button></td></tr>';
-        }).join('') || '<tr><td colspan="5">خالی</td></tr>';
-        document.querySelectorAll('[data-del]').forEach(function (btn) {
+        if (!co) { showMsg('شرکت یافت نشد. دوباره وارد شوید.', false); return; }
+        var staff = co.staff || [];
+        document.getElementById('count').textContent = staff.length;
+        document.querySelector('#tbl tbody').innerHTML = staff.map(function (s) {
+          return '<tr><td>' + (s.name || '') + '</td><td>' + (s.position || '') + '</td><td>' +
+            (s.education || '—') + '</td><td>' + (roleMap[s.role] || s.role || '') + '</td><td>' +
+            '<button type="button" class="btn-edit" data-id="' + s.id + '">ویرایش</button> ' +
+            '<button type="button" class="btn-del" data-id="' + s.id + '" style="color:#dc2626">حذف</button></td></tr>';
+        }).join('') || '<tr><td colspan="5">هنوز پرسنلی ثبت نشده.</td></tr>';
+        document.querySelectorAll('.btn-del').forEach(function (btn) {
           btn.onclick = async function () {
-            if (!confirm('حذف؟')) return;
-            await ISOAuth.deleteStaff(session.companyId, btn.getAttribute('data-del'));
-            render();
+            if (!confirm('حذف این نفر؟')) return;
+            try {
+              await ISOAuth.deleteStaff(session.companyId, btn.getAttribute('data-id'));
+              showMsg('حذف شد', true);
+              render();
+            } catch (err) { showMsg(err.message || String(err), false); }
           };
         });
-        document.querySelectorAll('.edit-btn').forEach(function (btn) {
+        document.querySelectorAll('.btn-edit').forEach(function (btn) {
           btn.onclick = function () {
-            var co = ISOAuth.getCompany(session.companyId);
-            var s = (co.staff || []).find(function (x) { return x.id === btn.getAttribute('data-id'); });
+            var id = btn.getAttribute('data-id');
+            var s = (ISOAuth.getCompany(session.companyId).staff || []).find(function (x) { return x.id === id; });
             if (!s) return;
-            var f = document.getElementById('staffForm');
-            f.id.value = s.id; f.name.value = s.name; f.position.value = s.position;
-            f.education.value = s.education || ''; f.role.value = s.role || 'technical';
+            document.getElementById('staffId').value = s.id;
+            document.getElementById('stName').value = s.name || '';
+            document.getElementById('stPos').value = s.position || '';
+            document.getElementById('stEdu').value = s.education || '';
+            document.getElementById('stRole').value = s.role || 'technical';
             document.getElementById('formTitle').textContent = 'ویرایش پرسنل';
             document.getElementById('cancelEdit').style.display = 'inline-flex';
           };
         });
       }
       document.getElementById('cancelEdit').onclick = function () {
-        document.getElementById('staffForm').reset(); document.getElementById('staffId').value = '';
-        document.getElementById('formTitle').textContent = 'افزودن پرسنل'; this.style.display = 'none';
+        document.getElementById('staffForm').reset();
+        document.getElementById('staffId').value = '';
+        document.getElementById('formTitle').textContent = 'افزودن پرسنل';
+        this.style.display = 'none';
       };
       document.getElementById('staffForm').onsubmit = async function (e) {
         e.preventDefault();
-        var fd = Object.fromEntries(new FormData(e.target));
-        if (!fd.id) delete fd.id;
-        await ISOAuth.upsertStaff(session.companyId, fd);
-        e.target.reset(); document.getElementById('staffId').value = '';
-        document.getElementById('formTitle').textContent = 'افزودن پرسنل';
-        document.getElementById('cancelEdit').style.display = 'none';
-        render();
+        var btn = document.getElementById('saveBtn');
+        btn.disabled = true;
+        btn.textContent = 'در حال ذخیره...';
+        var staff = {
+          id: document.getElementById('staffId').value || undefined,
+          name: document.getElementById('stName').value.trim(),
+          position: document.getElementById('stPos').value.trim(),
+          education: document.getElementById('stEdu').value.trim(),
+          role: document.getElementById('stRole').value
+        };
+        if (!staff.id) delete staff.id;
+        if (!staff.name || !staff.position) {
+          showMsg('نام و سمت الزامی است', false);
+          btn.disabled = false;
+          btn.textContent = 'ذخیره پرسنل';
+          return;
+        }
+        try {
+          var res = await ISOAuth.upsertStaff(session.companyId, staff);
+          showMsg('ذخیره شد — تعداد: ' + ((res && res.staff) ? res.staff.length : '✓'), true);
+          e.target.reset();
+          document.getElementById('staffId').value = '';
+          document.getElementById('formTitle').textContent = 'افزودن پرسنل';
+          document.getElementById('cancelEdit').style.display = 'none';
+          await ISOAuth.refresh();
+          render();
+        } catch (err) {
+          showMsg(err.message || String(err), false);
+        }
+        btn.disabled = false;
+        btn.textContent = 'ذخیره پرسنل';
       };
       render();
     });
