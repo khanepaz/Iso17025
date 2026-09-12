@@ -1,11 +1,35 @@
-<!DOCTYPE html>
-<html lang="fa" dir="rtl"><head><meta charset="UTF-8"/><title>تعهدنامه بی‌طرفی کارکنان</title>
-<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600&display=swap" rel="stylesheet"/>
-<style>body{font-family:Vazirmatn,Tahoma,sans-serif;max-width:800px;margin:24px auto;padding:16px;line-height:1.8}h1{color:#0f4c81;border-bottom:3px solid #0f4c81;padding-bottom:8px}.box{border:1px solid #cbd5e1;border-radius:8px;padding:12px;min-height:80px;margin:12px 0}.sign{display:flex;justify-content:space-between;margin-top:40px}@media print{button{display:none}}</style></head><body>
-<button onclick="print()">چاپ / ذخیره PDF</button>
-<h1>F-02 — تعهدنامه بی‌طرفی کارکنان</h1>
-<p>اینجانب متعهد می‌شوم در انجام وظایف بی‌طرفانه عمل کنم و تعارض منافع را اعلام نمایم.</p>
-<p><strong>نام شرکت:</strong> ..............................</p>
-<div class="box">توضیحات / شواهد:<br/><br/><br/></div>
-<div class="sign"><div>نام و امضا: ............</div><div>تاریخ: ............</div></div>
+<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="UTF-8"/><title>تعهدنامه بی‌طرفی کارکنان</title><style>
+@page { size: A4; margin: 12mm; }
+body { font-family: Tahoma, 'Vazirmatn', sans-serif; font-size: 11pt; line-height: 1.7; color: #1e293b; max-width: 210mm; margin: 0 auto; padding: 16px; }
+h1 { font-size: 14pt; color: #0f4c81; border-bottom: 3px solid #00a896; padding-bottom: 6px; }
+h2 { font-size: 12pt; color: #0f4c81; margin-top: 16px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; }
+.meta { font-size: 9pt; color: #64748b; margin-bottom: 12px; }
+ul { padding-right: 20px; } li { margin-bottom: 4px; }
+.box { border: 1px solid #94a3b8; background: #f8fafc; min-height: 44px; padding: 8px; margin: 8px 0; border-radius: 6px; }
+.row { display: flex; gap: 12px; margin: 8px 0; }
+.row .f { flex: 1; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 8px 4px; background: #fafbfc; font-size: 9pt; color: #64748b; min-height: 36px; }
+.check { list-style: none; padding: 0; } .check li::before { content: "☐ "; }
+@media print { body { padding: 0; } .noprint { display: none; } }
+</style></head><body>
+<p class="meta">ISO/IEC 17025:2017 | کد: F-02-STAFF-IMP | نسخه 2.0 | بند ۴-۱</p>
+<h1>تعهدنامه بی‌طرفی کارکنان</h1>
+<h2>۱. مشخصات فرد</h2>
+<div class="row"><div class="f">نام و نام خانوادگی</div><div class="f">کد پرسنلی</div></div>
+<div class="row"><div class="f">سمت / واحد</div><div class="f">تاریخ شروع همکاری</div></div>
+<h2>۲. موضوع تعهد</h2>
+<p>اینجانب با آگاهی از بند ۴-۱ استاندارد ISO/IEC 17025:2017 متعهد می‌شوم فعالیت‌های محوله را صرفاً بر اساس شواهد عینی و بدون تأثیر منافع شخصی، تجاری یا ثالث انجام دهم.</p>
+<h2>۳. مفاد تعهد</h2>
+<ul class="check">
+<li>تصمیم فنی را تحت تأثیر فشار مالی، هدیه یا رابطه شخصی قرار نمی‌دهم.</li>
+<li>تعارض منافع واقعی یا بالقوه را فوراً اعلام می‌کنم.</li>
+<li>در بازاریابی مخرب اعتبار نتایج مشارکت نمی‌کنم.</li>
+<li>اسناد و نتایج را بدون مجوز خارج یا افشا نمی‌کنم.</li>
+<li>از تجهیزات فقط در چارچوب اختیارات مصوب استفاده می‌کنم.</li>
+<li>تغییر شرایط شغلی مؤثر بر بی‌طرفی را کتباً اعلام می‌کنم.</li>
+</ul>
+<h2>۴. امضا</h2>
+<p>این تعهد تا پایان همکاری و پس از آن در خصوص اطلاعات کسب‌شده معتبر است.</p>
+<div class="row"><div class="f">تاریخ تعهد</div><div class="f">امضای متعهد</div></div>
+<div class="row"><div class="f">نام نماینده آزمایشگاه</div><div class="f">امضای نماینده</div></div>
+<p class="noprint" style="text-align:center"><button onclick="window.print()">🖨 چاپ / PDF</button></p>
 </body></html>
