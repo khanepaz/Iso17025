@@ -15,27 +15,32 @@
       <div class="app-user"><span id="userLabel"></span><button onclick="ISOAuth.logout()">خروج</button></div>
     </div>
   </header>
+  <div id="appNav"></div>
   <main class="app-main">
     <div class="panel"><h2>خلاصه</h2><div id="summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px"></div></div>
     <div class="panel">
       <h2>ماژول‌ها</h2>
       <div class="modules-grid">
+        <a class="module-card" href="modules/audit-checklist.html"><div class="icon">✅</div><h3>چک‌لیست ممیزی NACI</h3><p>الزامات + شواهد برای هر بند</p></a>
+        <a class="module-card" href="modules/forms.html"><div class="icon">📥</div><h3>فرم‌ها و PDF</h3><p>دانلود فرم‌های استاندارد</p></a>
         <a class="module-card" href="index.html"><div class="icon">📖</div><h3>راهنمای بندبه‌بند</h3><p>الزامات و چک‌لیست</p></a>
         <a class="module-card" href="modules/staff.html"><div class="icon">👥</div><h3>مدیریت پرسنل</h3><p>افزودن، ویرایش، حذف</p></a>
         <a class="module-card" href="modules/deputies.html"><div class="icon">🔄</div><h3>جانشینان</h3><p>تعیین جانشین</p></a>
         <a class="module-card" href="modules/responsibilities.html"><div class="icon">📋</div><h3>ماتریس RACI</h3><p>مسئول، پاسخ‌گو، راهنما، مطلع</p></a>
         <a class="module-card" href="modules/key-personnel.html"><div class="icon">⭐</div><h3>نفرات شاخص</h3><p>جدول چاپی</p></a>
-        <a class="module-card" href="modules/branded-forms.html"><div class="icon">📄</div><h3>فرم‌های شخصی‌سازی‌شده</h3><p>با نام و لوگوی شرکت</p></a>
+        <a class="module-card" href="modules/branded-forms.html"><div class="icon">📄</div><h3>فرم شخصی‌سازی‌شده</h3><p>با نام و لوگوی شرکت</p></a>
         <a class="module-card" href="modules/password.html"><div class="icon">🔑</div><h3>تغییر رمز عبور</h3><p>امنیت حساب</p></a>
         <a class="module-card" href="setup.html"><div class="icon">⚙️</div><h3>ویرایش اطلاعات شرکت</h3><p>پروفایل و لوگو</p></a>
       </div>
     </div>
   </main>
   <script src="js/auth.js"></script>
+  <script src="js/nav.js"></script>
   <script>
     ISOAuth.initAuth().then(function () {
       var session = ISOAuth.requireAuth(['lab']);
       if (!session) return;
+      renderAppNav('dashboard');
       var company = ISOAuth.getCompany(session.companyId);
       if (!company || !company.setupComplete) location.href = 'setup.html';
       document.getElementById('userLabel').textContent = session.username;
