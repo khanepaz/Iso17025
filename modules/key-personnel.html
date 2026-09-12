@@ -7,25 +7,34 @@
   <link rel="stylesheet" href="../css/style.css" /><link rel="stylesheet" href="../css/auth.css" />
 </head>
 <body>
-  <header class="app-header"><div class="app-header-inner"><div class="app-brand"><a href="../dashboard.html" style="color:inherit">← داشبورد</a> | نفرات شاخص</div><div class="app-user"><button onclick="ISOAuth.logout()">خروج</button></div></div></header>
-  <main class="app-main">
-    <div class="panel">
-      <h2>جدول نفرات شاخص</h2>
-      <div class="table-wrap"><table class="data-table" id="tbl"><thead><tr><th>ردیف</th><th>نام</th><th>سمت</th><th>مدرک</th><th>نقش</th><th>جانشین</th></tr></thead><tbody></tbody></table></div>
-      <button class="btn btn-primary" style="margin-top:16px" onclick="window.print()">چاپ / PDF</button>
-    </div>
-  </main>
+  <header class="app-header"><div class="app-header-inner">
+    <div class="app-brand"><a href="../dashboard.html" style="color:inherit">← داشبورد</a> | نفرات شاخص</div>
+    <div class="app-user"><button onclick="ISOAuth.logout()">خروج</button></div>
+  </div></header>
+  <main class="app-main"><div class="panel">
+    <h2 id="coName">جدول نفرات شاخص</h2>
+    <div class="table-wrap"><table class="data-table" id="tbl">
+      <thead><tr><th>ردیف</th><th>نام</th><th>سمت</th><th>مدرک</th><th>نقش</th><th>جانشین</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <button class="btn btn-primary" style="margin-top:16px" onclick="window.print()">چاپ</button>
+  </div></main>
   <script src="../js/auth.js"></script>
   <script>
-    const session = ISOAuth.requireAuth(['lab']);
-    const co = ISOAuth.getCompany(session.companyId);
-    const map = Object.fromEntries((co.staff||[]).map(s => [s.id, s]));
-    const deps = co.matrices?.deputies || [];
-    const roleMap = { management:'مدیریت', technical:'فنی', quality:'کیفیت', support:'پشتیبانی' };
-    document.querySelector('#tbl tbody').innerHTML = (co.staff||[]).map((s,i) => {
-      const dnames = deps.filter(d => d.personId === s.id).map(d => map[d.deputyId]?.name).filter(Boolean).join('، ') || '—';
-      return `<tr><td>${i+1}</td><td>${s.name}</td><td>${s.position}</td><td>${s.education||'—'}</td><td>${roleMap[s.role]||s.role}</td><td>${dnames}</td></tr>`;
-    }).join('') || '<tr><td colspan="6">خالی</td></tr>';
+    ISOAuth.initAuth().then(function () {
+      var session = ISOAuth.requireAuth(['lab']); if (!session) return;
+      var co = ISOAuth.getCompany(session.companyId);
+      document.getElementById('coName').textContent = (co.name || '') + ' — نفرات شاخص';
+      var map = {}; (co.staff || []).forEach(function (s) { map[s.id] = s; });
+      var deps = (co.matrices && co.matrices.deputies) || [];
+      var roleMap = { management: 'مدیریت', technical: 'فنی', quality: 'کیفیت', support: 'پشتیبانی' };
+      document.querySelector('#tbl tbody').innerHTML = (co.staff || []).map(function (s, i) {
+        var dnames = deps.filter(function (d) { return d.personId === s.id; })
+          .map(function (d) { return map[d.deputyId] && map[d.deputyId].name; }).filter(Boolean).join('، ') || '—';
+        return '<tr><td>' + (i + 1) + '</td><td>' + s.name + '</td><td>' + s.position + '</td><td>' + (s.education || '—') +
+          '</td><td>' + (roleMap[s.role] || s.role) + '</td><td>' + dnames + '</td></tr>';
+      }).join('') || '<tr><td colspan="6">خالی</td></tr>';
+    });
   </script>
 </body>
 </html>

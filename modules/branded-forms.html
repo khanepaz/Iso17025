@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>فرم‌های شرکت</title>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/style.css" /><link rel="stylesheet" href="../css/auth.css" />
+  <style>
+    .form-preview{border:1px solid #e2e8f0;border-radius:12px;padding:24px;margin-bottom:20px;background:#fff;max-width:800px}
+    .form-header-brand{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #0f4c81;padding-bottom:12px;margin-bottom:16px}
+    .form-header-brand img{max-height:56px}
+    .form-header-brand h3{margin:0;color:#0f4c81;font-size:1.1rem}
+    .form-header-brand small{color:#64748b;display:block;font-size:0.8rem}
+    @media print{.app-header,.no-print{display:none!important}.form-preview{border:none}}
+  </style>
+</head>
+<body>
+  <header class="app-header no-print"><div class="app-header-inner">
+    <div class="app-brand"><a href="../dashboard.html" style="color:inherit">← داشبورد</a> | فرم‌های شخصی‌سازی‌شده</div>
+    <div class="app-user"><button onclick="ISOAuth.logout()">خروج</button></div>
+  </div></header>
+  <main class="app-main">
+    <div class="panel no-print">
+      <h2>فرم‌ها با سربرگ شرکت شما</h2>
+      <p style="font-size:0.9rem;color:#64748b">نام و لوگو از پروفایل شرکت خوانده می‌شود. داده هر شرکت جداست.</p>
+      <div style="margin-top:12px">
+        <button class="btn btn-primary" onclick="showForm('conf')">تعهدنامه محرمانگی</button>
+        <button class="btn btn-primary" onclick="showForm('imp')" style="margin-right:8px">تعهدنامه بی‌طرفی</button>
+        <button class="btn btn-outline no-print" onclick="window.print()" style="margin-right:8px;color:#0f4c81;border-color:#0f4c81">چاپ</button>
+      </div>
+    </div>
+    <div id="preview" class="form-preview"></div>
+  </main>
+  <script src="../js/auth.js"></script>
+  <script>
+    var company=null;
+    function brandHeader(title){
+      var logo=company.logoDataUrl?'<img src="'+company.logoDataUrl+'" alt="logo" />':'<span style="font-size:2rem">🔬</span>';
+      return '<div class="form-header-brand"><div>'+logo+'</div><div style="text-align:left"><h3>'+(company.name||'نام شرکت')+'</h3><small>'+(company.address||'')+(company.phone?' | '+company.phone:'')+'</small><strong style="display:block;margin-top:6px">'+title+'</strong></div></div>';
+    }
+    function showForm(type){
+      var html='';
+      if(type==='conf'){
+        html=brandHeader('تعهدنامه محرمانگی (رازداری)')+'<p>اینجانب ........................ متعهد می‌شوم کلیه اطلاعات مشتریان و نتایج <strong>'+(company.name||'این آزمایشگاه')+'</strong> را محرمانه نگه دارم.</p><p style="margin-top:24px">نام: .......... امضا: .......... تاریخ: ..........</p>';
+      } else {
+        html=brandHeader('تعهدنامه بی‌طرفی')+'<p>اینجانب ........................ در <strong>'+(company.name||'این آزمایشگاه')+'</strong> بی‌طرفانه عمل می‌کنم و تعارض منافع را اعلام می‌نمایم.</p><p style="margin-top:24px">نام: .......... امضا: .......... تاریخ: ..........</p>';
+      }
+      document.getElementById('preview').innerHTML=html;
+    }
+    ISOAuth.initAuth().then(function(){
+      var session=ISOAuth.requireAuth(['lab']); if(!session) return;
+      company=ISOAuth.getCompany(session.companyId); showForm('conf');
+    });
+  </script>
+</body>
+</html>
