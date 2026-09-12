@@ -33,15 +33,16 @@
   <script src="../js/auth.js"></script>
   <script src="../js/nav.js"></script>
   <script>
-    ISOAuth.initAuth().then(function () {
+    ISOAuth.initAuth().then(async function () {
       var session = ISOAuth.requireAuth(['lab']);
       if (!session) return;
-      renderAppNav('dashboard');
+      if (typeof renderAppNav === 'function') renderAppNav('key');
+      try { await ISOAuth.refresh(); } catch (e) {}
       var co = ISOAuth.getCompany(session.companyId);
       document.getElementById('coName').textContent = ((co && co.name) || 'شرکت') + ' — نفرات شاخص';
       var staff = (co && co.staff) || [];
       if (!staff.length) {
-        document.getElementById('hint').innerHTML = 'پرسنلی ثبت نشده. ابتدا از <a href="staff.html">مدیریت پرسنل</a> نفرات را اضافه کنید.';
+        document.getElementById('hint').innerHTML = 'پرسنلی ثبت نشده. از <a href="staff.html">مدیریت پرسنل</a> اضافه کنید.';
       }
       var map = {};
       staff.forEach(function (s) { map[s.id] = s; });
@@ -54,7 +55,7 @@
         return '<tr><td>' + (i + 1) + '</td><td>' + s.name + '</td><td>' + s.position +
           '</td><td>' + (s.education || '—') + '</td><td>' + (roleMap[s.role] || s.role) +
           '</td><td>' + dnames + '</td></tr>';
-      }).join('') || '<tr><td colspan="6">خالی — پرسنل را از بخش مدیریت پرسنل اضافه کنید</td></tr>';
+      }).join('') || '<tr><td colspan="6">خالی</td></tr>';
     });
   </script>
 </body>

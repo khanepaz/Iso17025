@@ -40,10 +40,11 @@
   <script src="../js/auth.js"></script>
   <script src="../js/nav.js"></script>
   <script>
-    ISOAuth.initAuth().then(function () {
+    ISOAuth.initAuth().then(async function () {
       var session = ISOAuth.requireAuth(['lab']);
       if (!session) return;
-      if (typeof renderAppNav === 'function') renderAppNav('dashboard');
+      if (typeof renderAppNav === 'function') renderAppNav('deputies');
+      try { await ISOAuth.refresh(); } catch (e) {}
       var msg = document.getElementById('msg');
       function fill() {
         var co = ISOAuth.getCompany(session.companyId);
