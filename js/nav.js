@@ -1,4 +1,4 @@
-/** نوار ناوبری مشترک — فشرده و مناسب موبایل */
+/** نوار ناوبری مشترک — همه صفحات */
 function renderAppNav(active) {
   var base = '';
   if (location.pathname.indexOf('/modules/') !== -1 || location.pathname.indexOf('/admin/') !== -1) {
@@ -6,10 +6,12 @@ function renderAppNav(active) {
   }
   var links = [
     { id: 'dashboard', href: base + 'dashboard.html', label: 'داشبورد' },
-    { id: 'guide', href: base + 'index.html', label: 'راهنما' },
     { id: 'audit', href: base + 'modules/audit-checklist.html', label: 'ممیزی' },
     { id: 'forms', href: base + 'modules/forms.html', label: 'فرم‌ها' },
+    { id: 'branded', href: base + 'modules/branded-forms.html', label: 'فرم شرکت' },
     { id: 'staff', href: base + 'modules/staff.html', label: 'پرسنل' },
+    { id: 'deputies', href: base + 'modules/deputies.html', label: 'جانشینان' },
+    { id: 'key', href: base + 'modules/key-personnel.html', label: 'نفرات شاخص' },
     { id: 'raci', href: base + 'modules/responsibilities.html', label: 'RACI' },
     { id: 'setup', href: base + 'setup.html', label: 'شرکت' }
   ];
