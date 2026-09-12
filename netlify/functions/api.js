@@ -125,6 +125,38 @@ exports.handler = async (event) => {
       return json(200, { ok: true, user: { id: user.id, username: user.username, role: user.role, companyId }, company });
     }
 
+    if (action === 'updateLabUser') {
+      const p = body.payload || {};
+      if (!p.username) return json(400, { ok: false, error: 'username لازم است' });
+      const u = data.users.find(x => x.username === p.username && x.role === 'lab');
+      if (!u) return json(404, { ok: false, error: 'کاربر یافت نشد' });
+      if (p.password && p.password.length >= 4) u.password = p.password;
+      const co = data.companies.find(c => c.id === u.companyId);
+      if (co) {
+        if (p.companyName != null) co.name = p.companyName;
+        if (p.address != null) co.address = p.address;
+        if (p.phone != null) co.phone = p.phone;
+        if (p.seniorManager != null) co.seniorManager = p.seniorManager;
+        if (p.technicalManager != null) co.technicalManager = p.technicalManager;
+        co.updatedAt = new Date().toISOString();
+      }
+      await githubPutFile(data, sha, 'update lab user ' + p.username);
+      return json(200, { ok: true, user: { username: u.username, companyId: u.companyId }, company: co });
+    }
+
+    if (action === 'deleteLabUser') {
+      const username = body.username;
+      if (!username) return json(400, { ok: false, error: 'username لازم است' });
+      const u = data.users.find(x => x.username === username && x.role === 'lab');
+      if (!u) return json(404, { ok: false, error: 'کاربر یافت نشد' });
+      data.users = data.users.filter(x => x.username !== username);
+      if (u.companyId) {
+        data.companies = data.companies.filter(c => c.id !== u.companyId);
+      }
+      await githubPutFile(data, sha, 'delete lab user ' + username);
+      return json(200, { ok: true });
+    }
+
     if (action === 'updateCompany') {
       const { companyId, updates } = body;
       const idx = data.companies.findIndex(c => c.id === companyId);
