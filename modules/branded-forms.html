@@ -1,55 +1,166 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
-  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>فرم‌های شرکت</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>فرم‌های شخصی‌سازی‌شده | ISO 17025</title>
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/style.css" /><link rel="stylesheet" href="../css/auth.css" />
+  <link rel="stylesheet" href="../css/style.css" />
+  <link rel="stylesheet" href="../css/auth.css" />
   <style>
-    .form-preview{border:1px solid #e2e8f0;border-radius:12px;padding:24px;margin-bottom:20px;background:#fff;max-width:800px}
-    .form-header-brand{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #0f4c81;padding-bottom:12px;margin-bottom:16px}
-    .form-header-brand img{max-height:56px}
-    .form-header-brand h3{margin:0;color:#0f4c81;font-size:1.1rem}
-    .form-header-brand small{color:#64748b;display:block;font-size:0.8rem}
-    @media print{.app-header,.no-print{display:none!important}.form-preview{border:none}}
+    .form-tabs { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; }
+    .form-tabs button { border:1px solid #cbd5e1; background:#f8fafc; color:#0f4c81; border-radius:8px; padding:8px 12px; cursor:pointer; font-family:inherit; font-size:0.85rem; }
+    .form-tabs button.active { background:#0f4c81; color:#fff; border-color:#0f4c81; }
+    .form-preview { border:1px solid #e2e8f0; border-radius:12px; padding:28px 24px; margin-bottom:20px; background:#fff; max-width:860px; line-height:1.8; font-size:0.95rem; color:#1e293b; }
+    .form-header-brand { display:flex; align-items:center; justify-content:space-between; gap:16px; border-bottom:3px solid #0f4c81; padding-bottom:14px; margin-bottom:18px; }
+    .form-header-brand img { max-height:64px; max-width:140px; object-fit:contain; }
+    .form-header-brand h3 { margin:0; color:#0f4c81; font-size:1.15rem; }
+    .form-header-brand small { color:#64748b; display:block; font-size:0.8rem; }
+    .form-preview h4 { color:#0f4c81; margin:18px 0 8px; font-size:1rem; border-right:3px solid #00a896; padding-right:8px; }
+    .form-preview ul { padding-right:22px; margin:8px 0; }
+    .field-row { display:flex; gap:12px; flex-wrap:wrap; margin:10px 0; }
+    .field-box { flex:1; min-width:160px; border:1px solid #cbd5e1; border-radius:8px; min-height:40px; padding:8px 10px; color:#94a3b8; font-size:0.8rem; background:#fafbfc; }
+    .check-list { list-style:none; padding:0; }
+    .check-list li::before { content:"☐ "; }
+    .sig-row { display:flex; gap:20px; margin-top:28px; flex-wrap:wrap; }
+    .sig-box { flex:1; min-width:160px; border-top:1px solid #94a3b8; padding-top:8px; font-size:0.85rem; color:#64748b; }
+    .meta-line { font-size:0.8rem; color:#64748b; margin-bottom:8px; }
+    @media print { .app-header, .no-print, #appNav { display:none !important; } .form-preview { border:none; max-width:100%; padding:0; } }
   </style>
 </head>
 <body>
-  <header class="app-header no-print"><div class="app-header-inner">
-    <div class="app-brand"><a href="../dashboard.html" style="color:inherit">← داشبورد</a> | فرم‌های شخصی‌سازی‌شده</div>
-    <div class="app-user"><button onclick="ISOAuth.logout()">خروج</button></div>
-  </div></header>
+  <header class="app-header no-print">
+    <div class="app-header-inner">
+      <div class="app-brand"><a href="../dashboard.html" style="color:inherit">← داشبورد</a> | فرم‌های شخصی‌سازی‌شده</div>
+      <div class="app-user"><button onclick="ISOAuth.logout()">خروج</button></div>
+    </div>
+  </header>
+  <div id="appNav" class="no-print"></div>
   <main class="app-main">
     <div class="panel no-print">
-      <h2>فرم‌ها با سربرگ شرکت شما</h2>
-      <p style="font-size:0.9rem;color:#64748b">نام و لوگو از پروفایل شرکت خوانده می‌شود. داده هر شرکت جداست.</p>
-      <div style="margin-top:12px">
-        <button class="btn btn-primary" onclick="showForm('conf')">تعهدنامه محرمانگی</button>
-        <button class="btn btn-primary" onclick="showForm('imp')" style="margin-right:8px">تعهدنامه بی‌طرفی</button>
-        <button class="btn btn-outline no-print" onclick="window.print()" style="margin-right:8px;color:#0f4c81;border-color:#0f4c81">چاپ</button>
+      <h2>فرم‌های استاندارد با سربرگ شرکت شما</h2>
+      <p id="coHint" style="font-size:0.9rem;color:#64748b"></p>
+      <div class="form-tabs" id="tabs"></div>
+      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="window.print()">🖨 چاپ / ذخیره PDF</button>
+        <a class="btn btn-outline" href="../setup.html" style="color:#0f4c81;border-color:#0f4c81">ویرایش نام و لوگو</a>
+        <a class="btn btn-outline" href="forms.html" style="color:#0f4c81;border-color:#0f4c81">همه فرم‌های خام</a>
       </div>
     </div>
     <div id="preview" class="form-preview"></div>
   </main>
   <script src="../js/auth.js"></script>
+  <script src="../js/nav.js"></script>
   <script>
-    var company=null;
-    function brandHeader(title){
-      var logo=company.logoDataUrl?'<img src="'+company.logoDataUrl+'" alt="logo" />':'<span style="font-size:2rem">🔬</span>';
-      return '<div class="form-header-brand"><div>'+logo+'</div><div style="text-align:left"><h3>'+(company.name||'نام شرکت')+'</h3><small>'+(company.address||'')+(company.phone?' | '+company.phone:'')+'</small><strong style="display:block;margin-top:6px">'+title+'</strong></div></div>';
+    var company = { name: '', address: '', phone: '', logoDataUrl: '' };
+    var FORMS = [
+      { id: 'f01', code: 'F-01', title: 'خط‌مشی و بیانیه بی‌طرفی', clause: '4.1' },
+      { id: 'f02', code: 'F-02', title: 'تعهدنامه بی‌طرفی کارکنان', clause: '4.1' },
+      { id: 'f03', code: 'F-03', title: 'تعهدنامه رازداری و محرمانگی', clause: '4.2' },
+      { id: 'f04', code: 'F-04', title: 'ارزیابی ریسک بی‌طرفی', clause: '4.1.4' },
+      { id: 'f05', code: 'F-05', title: 'بازنگری درخواست و قرارداد', clause: '7.1' },
+      { id: 'f06', code: 'F-06', title: 'دریافت اقلام آزمون/کالیبراسیون', clause: '7.4' },
+      { id: 'f07', code: 'F-07', title: 'کار نامنطبق', clause: '7.10' },
+      { id: 'f08', code: 'F-08', title: 'شکایت', clause: '7.9' },
+      { id: 'f09', code: 'F-09', title: 'اقدام اصلاحی', clause: '8.7' },
+      { id: 'f10', code: 'F-10', title: 'ارزیابی شایستگی', clause: '6.2' }
+    ];
+    function brand(title, code, clause) {
+      var logo = company.logoDataUrl
+        ? '<img src="' + company.logoDataUrl + '" alt="logo" />'
+        : '<div style="width:56px;height:56px;border-radius:12px;background:#e0f2fe;display:flex;align-items:center;justify-content:center;font-size:1.6rem">🔬</div>';
+      var name = company.name || 'نام آزمایشگاه / شرکت';
+      var sub = [company.address, company.phone].filter(Boolean).join(' | ');
+      return '<div class="meta-line">ISO/IEC 17025:2017 | کد: ' + code + ' | بند ' + clause + '</div>' +
+        '<div class="form-header-brand"><div>' + logo + '</div><div style="text-align:left">' +
+        '<h3>' + name + '</h3><small>' + (sub || 'آدرس و تلفن از پروفایل شرکت') + '</small>' +
+        '<strong style="display:block;margin-top:8px;color:#0f4c81">' + title + '</strong></div></div>';
     }
-    function showForm(type){
-      var html='';
-      if(type==='conf'){
-        html=brandHeader('تعهدنامه محرمانگی (رازداری)')+'<p>اینجانب ........................ متعهد می‌شوم کلیه اطلاعات مشتریان و نتایج <strong>'+(company.name||'این آزمایشگاه')+'</strong> را محرمانه نگه دارم.</p><p style="margin-top:24px">نام: .......... امضا: .......... تاریخ: ..........</p>';
+    function sig() {
+      return '<div class="sig-row"><div class="sig-box">نام و نام خانوادگی<br>........................</div><div class="sig-box">سمت<br>........................</div><div class="sig-box">امضا و تاریخ<br>........................</div></div>';
+    }
+    function fields(arr) {
+      return '<div class="field-row">' + arr.map(function (t) { return '<div class="field-box">' + t + '</div>'; }).join('') + '</div>';
+    }
+    function checks(arr) {
+      return '<ul class="check-list">' + arr.map(function (t) { return '<li>' + t + '</li>'; }).join('') + '</ul>';
+    }
+    function body(id) {
+      var n = company.name || 'این آزمایشگاه';
+      if (id === 'f01') return brand('خط‌مشی و بیانیه بی‌طرفی', 'F-01', '4.1') +
+        '<h4>تعریف بی‌طرفی</h4><p><strong>بی‌طرفی</strong> یعنی وجود عینیت در فعالیت‌های آزمایشگاه؛ تعارض منافع وجود نداشته باشد یا طوری حل شود که بر نتایج اثر منفی نگذارد.</p>' +
+        '<h4>بیانیه تعهد مدیریت ارشد <strong>' + n + '</strong></h4><p>مدیریت ارشد متعهد است فعالیت‌ها را بی‌طرفانه مدیریت کند و فشار تجاری/مالی را دخالت ندهد.</p>' +
+        '<h4>تعهدات عملی</h4>' + checks(['شناسایی مستمر ریسک بی‌طرفی','حذف یا کاهش ریسک و مستندسازی','آموزش دوره‌ای پرسنل','اخذ تعهدنامه کتبی','منع هدیه/کمیسیون مؤثر بر تصمیم فنی','گزارش فوری تعارض منافع']) +
+        fields(['نام مدیر ارشد','تاریخ تصویب']) + fields(['امضا و مهر','امضای مدیر کیفیت']);
+      if (id === 'f02') return brand('تعهدنامه بی‌طرفی کارکنان', 'F-02', '4.1') +
+        fields(['نام و نام خانوادگی','کد پرسنلی','سمت']) +
+        '<h4>موضوع تعهد در <strong>' + n + '</strong></h4><p>فعالیت‌ها را صرفاً بر اساس شواهد عینی و بدون منافع شخصی/تجاری انجام می‌دهم.</p>' +
+        checks(['تصمیم فنی تحت فشار مالی/هدیه نیست','تعارض منافع را فوراً اعلام می‌کنم','اسناد را بدون مجوز افشا نمی‌کنم','از تجهیزات در چارچوب اختیارات استفاده می‌کنم']) + sig();
+      if (id === 'f03') return brand('تعهدنامه رازداری و محرمانگی', 'F-03', '4.2') +
+        '<h4>رازداری چیست؟</h4><p><strong>رازداری</strong> یعنی حفظ اطلاعات به‌دست‌آمده یا ایجادشده حین فعالیت آزمایشگاهی مگر رضایت مشتری یا الزام قانونی. طبق بند ۴-۲ آزمایشگاه مسئول مدیریت این اطلاعات است.</p>' +
+        '<h4>اطلاعات محرمانه</h4><ul><li>مشخصات مشتری و قرارداد</li><li>نتایج و گزارش‌ها پیش از انتشار</li><li>روش و داده مرجع مشتری</li><li>سوابق فنی و ایمیل</li><li>اطلاعات از منابع ثالث (منبع نیز محرمانه)</li></ul>' +
+        fields(['نام متعهد','سمت']) +
+        '<h4>تعهدات در <strong>' + n + '</strong></h4>' + checks(['مسئولیت مدیریت اطلاعات را می‌پذیرم','بدون رضایت یا قانون افشا نمی‌کنم','در الزام قانونی مشتری را مطلع می‌کنم','منبع ثالث را بدون موافقت افشا نمی‌کنم','پس از پایان همکاری نیز رعایت می‌کنم']) + sig();
+      if (id === 'f04') return brand('ارزیابی ریسک بی‌طرفی', 'F-04', '4.1.4') +
+        '<p><strong>' + n + '</strong> ریسک‌های بی‌طرفی را مستمر شناسایی و کنترل می‌کند.</p>' +
+        fields(['تاریخ ارزیابی','ارزیاب','تأییدکننده']) +
+        '<div class="field-box" style="min-height:90px">کد | شرح ریسک | احتمال | اثر | اقدام کنترلی</div>' +
+        checks(['ریسکی شناسایی نشد','ریسک‌ها کنترل‌شده‌اند','نیاز به اقدام فوری']) + fields(['امضای مدیر فنی','امضای مدیر کیفیت']);
+      if (id === 'f05') return brand('بازنگری درخواست و قرارداد', 'F-05', '7.1') +
+        fields(['شماره درخواست','تاریخ']) + fields(['نام مشتری','روش درخواستی']) +
+        checks(['الزامات تعریف و درک شده','منابع موجود است','روش مناسب است','قواعد تصمیم توافق شده','کار بیرونی اطلاع‌رسانی شده']) +
+        fields(['نتیجه: پذیرش/شرط/رد','امضا']);
+      if (id === 'f06') return brand('دریافت اقلام', 'F-06', '7.4') +
+        fields(['شماره پذیرش','تاریخ و ساعت']) + fields(['نام مشتری','شماره قرارداد']) + fields(['نام قلم','سریال']) +
+        checks(['شناسه الصاق شد','انحراف ثبت شد','تردید به مشتری اعلام شد']) + fields(['گیرنده/امضا','تحویل‌دهنده/امضا']);
+      if (id === 'f07') return brand('کار نامنطبق', 'F-07', '7.10') +
+        fields(['شماره پرونده','تاریخ']) + '<div class="field-box" style="min-height:50px">شرح عدم انطباق:</div>' +
+        checks(['مسئولیت مشخص شد','اقدام بر اساس ریسک','تأثیر بر نتایج قبلی','اطلاع به مشتری در صورت لزوم']) +
+        '<div class="field-box" style="min-height:50px">اقدامات:</div>' + fields(['مدیر فنی','مدیر کیفیت']);
+      if (id === 'f08') return brand('شکایت', 'F-08', '7.9') +
+        fields(['شماره شکایت','تاریخ']) + fields(['نام شاکی','نحوه دریافت']) +
+        '<div class="field-box" style="min-height:50px">شرح شکایت:</div>' +
+        checks(['صحه‌گذاری شد','اقدامات ثبت شد','نتیجه توسط فرد غیر درگیر','اعلام پایان به شاکی']) +
+        fields(['مسئول رسیدگی','تاریخ اعلام']);
+      if (id === 'f09') return brand('اقدام اصلاحی', 'F-09', '8.7') +
+        fields(['شماره اقدام','منبع']) + '<div class="field-box" style="min-height:48px">شرح عدم انطباق:</div>' +
+        checks(['واکنش و کنترل','علت ریشه‌ای','بررسی موارد مشابه','بازنگری اثربخشی']) +
+        '<div class="field-box" style="min-height:50px">علت و اقدام / مسئول / مهلت:</div>' + fields(['مسئول اقدام','مدیر کیفیت']);
+      if (id === 'f10') return brand('ارزیابی شایستگی', 'F-10', '6.2') +
+        fields(['نام','سمت']) + fields(['تاریخ ارزیابی','نوع: بدو ورود/دوره‌ای']) + fields(['فعالیت تحت ارزیابی','ارزیاب']) +
+        checks(['تحصیلات مطابق','آموزش گذرانده','مهارت عملی اثبات شده','اختیار ابلاغ شده']) +
+        '<p>☐ شایسته &nbsp; ☐ با شرط آموزش &nbsp; ☐ نیاز به نظارت &nbsp; ☐ عدم احراز</p>' +
+        fields(['امضای ارزیاب','امضای فرد/مدیر فنی']);
+      return '';
+    }
+    function show(id) {
+      document.querySelectorAll('.form-tabs button').forEach(function (b) {
+        b.classList.toggle('active', b.getAttribute('data-id') === id);
+      });
+      document.getElementById('preview').innerHTML = body(id);
+    }
+    ISOAuth.initAuth().then(async function () {
+      var session = ISOAuth.requireAuth(['lab']);
+      if (!session) return;
+      if (typeof renderAppNav === 'function') renderAppNav('branded');
+      try { await ISOAuth.refresh(); } catch (e) {}
+      company = ISOAuth.getCompany(session.companyId) || company;
+      var hint = document.getElementById('coHint');
+      if (!company.name) {
+        hint.innerHTML = '⚠️ نام شرکت خالی است. از <a href="../setup.html">اطلاعات شرکت</a> تکمیل کنید.';
       } else {
-        html=brandHeader('تعهدنامه بی‌طرفی')+'<p>اینجانب ........................ در <strong>'+(company.name||'این آزمایشگاه')+'</strong> بی‌طرفانه عمل می‌کنم و تعارض منافع را اعلام می‌نمایم.</p><p style="margin-top:24px">نام: .......... امضا: .......... تاریخ: ..........</p>';
+        hint.textContent = 'شرکت: ' + company.name + (company.staff && company.staff.length ? ' | پرسنل: ' + company.staff.length : '') + ' — هر تب یک فرم کامل با سربرگ شماست.';
       }
-      document.getElementById('preview').innerHTML=html;
-    }
-    ISOAuth.initAuth().then(function(){
-      var session=ISOAuth.requireAuth(['lab']); if(!session) return;
-      company=ISOAuth.getCompany(session.companyId); showForm('conf');
+      var tabs = document.getElementById('tabs');
+      FORMS.forEach(function (f) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.setAttribute('data-id', f.id);
+        b.textContent = f.code + ' — ' + f.title;
+        b.onclick = function () { show(f.id); };
+        tabs.appendChild(b);
+      });
+      show('f03');
     });
   </script>
 </body>
