@@ -7,7 +7,10 @@
   <link rel="stylesheet" href="../css/style.css" /><link rel="stylesheet" href="../css/auth.css" />
 </head>
 <body>
-  <header class="app-header"><div class="app-header-inner"><div class="app-brand"><a href="../dashboard.html" style="color:inherit">← داشبورد</a> | جانشینان</div><div class="app-user"><button onclick="ISOAuth.logout()">خروج</button></div></div></header>
+  <header class="app-header"><div class="app-header-inner">
+    <div class="app-brand"><a href="../dashboard.html" style="color:inherit">← داشبورد</a> | جانشینان</div>
+    <div class="app-user"><button onclick="ISOAuth.logout()">خروج</button></div>
+  </div></header>
   <main class="app-main">
     <div class="panel"><h2>تعیین جانشین</h2>
       <form id="depForm" class="form-grid">
@@ -16,38 +19,58 @@
         <div class="full"><button type="submit" class="btn btn-primary">ثبت</button></div>
       </form>
     </div>
-    <div class="panel"><h2>جدول</h2><div class="table-wrap"><table class="data-table" id="tbl"><thead><tr><th>فرد</th><th>سمت</th><th>جانشین</th><th>سمت جانشین</th></tr></thead><tbody></tbody></table></div></div>
+    <div class="panel"><h2>جدول</h2>
+      <div class="table-wrap"><table class="data-table" id="tbl">
+        <thead><tr><th>فرد</th><th>سمت</th><th>جانشین</th><th>سمت جانشین</th><th></th></tr></thead><tbody></tbody>
+      </table></div>
+    </div>
   </main>
   <script src="../js/auth.js"></script>
   <script>
-    const session = ISOAuth.requireAuth(['lab']);
-    let co = ISOAuth.getCompany(session.companyId);
-    function fill() {
-      const opts = (co.staff||[]).map(s => `<option value="${s.id}">${s.name} — ${s.position}</option>`).join('');
-      document.getElementById('personSelect').innerHTML = opts;
-      document.getElementById('deputySelect').innerHTML = opts;
-    }
-    function render() {
-      co = ISOAuth.getCompany(session.companyId);
-      const map = Object.fromEntries((co.staff||[]).map(s => [s.id, s]));
-      const deps = co.matrices?.deputies || [];
-      document.querySelector('#tbl tbody').innerHTML = deps.map(d => {
-        const p = map[d.personId], dep = map[d.deputyId];
-        return `<tr><td>${p?.name||'?'}</td><td>${p?.position||''}</td><td>${dep?.name||'?'}</td><td>${dep?.position||''}</td></tr>`;
-      }).join('') || '<tr><td colspan="4">خالی</td></tr>';
-    }
-    document.getElementById('depForm').onsubmit = e => {
-      e.preventDefault();
-      const fd = new FormData(e.target);
-      const personId = fd.get('personId'), deputyId = fd.get('deputyId');
-      if (personId === deputyId) return alert('یکسان نیستند');
-      co = ISOAuth.getCompany(session.companyId);
-      const deps = [...(co.matrices?.deputies||[])];
-      deps.push({ personId, deputyId });
-      ISOAuth.updateCompany(session.companyId, { matrices: { ...(co.matrices||{}), deputies: deps } });
-      render();
-    };
-    fill(); render();
+    ISOAuth.initAuth().then(function () {
+      var session = ISOAuth.requireAuth(['lab']); if (!session) return;
+      var co = ISOAuth.getCompany(session.companyId);
+      function fill() {
+        co = ISOAuth.getCompany(session.companyId);
+        var opts = (co.staff || []).map(function (s) {
+          return '<option value="' + s.id + '">' + s.name + ' — ' + s.position + '</option>';
+        }).join('');
+        document.getElementById('personSelect').innerHTML = opts;
+        document.getElementById('deputySelect').innerHTML = opts;
+      }
+      function render() {
+        co = ISOAuth.getCompany(session.companyId);
+        var map = {}; (co.staff || []).forEach(function (s) { map[s.id] = s; });
+        var deps = (co.matrices && co.matrices.deputies) || [];
+        document.querySelector('#tbl tbody').innerHTML = deps.map(function (d, i) {
+          var p = map[d.personId], dep = map[d.deputyId];
+          return '<tr><td>' + (p && p.name || '?') + '</td><td>' + (p && p.position || '') +
+            '</td><td>' + (dep && dep.name || '?') + '</td><td>' + (dep && dep.position || '') +
+            '</td><td><button data-i="' + i + '" style="color:#dc2626">حذف</button></td></tr>';
+        }).join('') || '<tr><td colspan="5">خالی</td></tr>';
+        document.querySelectorAll('[data-i]').forEach(function (btn) {
+          btn.onclick = async function () {
+            var i = +btn.getAttribute('data-i');
+            var list = ((ISOAuth.getCompany(session.companyId).matrices || {}).deputies || []).slice();
+            list.splice(i, 1);
+            await ISOAuth.saveMatrices(session.companyId, { deputies: list });
+            render();
+          };
+        });
+      }
+      document.getElementById('depForm').onsubmit = async function (e) {
+        e.preventDefault();
+        var fd = new FormData(e.target);
+        var personId = fd.get('personId'), deputyId = fd.get('deputyId');
+        if (personId === deputyId) return alert('فرد و جانشین یکسان نباشند');
+        co = ISOAuth.getCompany(session.companyId);
+        var deps = ((co.matrices || {}).deputies || []).slice();
+        deps.push({ personId: personId, deputyId: deputyId });
+        await ISOAuth.saveMatrices(session.companyId, { deputies: deps });
+        render();
+      };
+      fill(); render();
+    });
   </script>
 </body>
 </html>

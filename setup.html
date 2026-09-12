@@ -1,34 +1,32 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>راه‌اندازی اولیه | ISO 17025</title>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>راه‌اندازی</title>
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css" />
-  <link rel="stylesheet" href="css/auth.css" />
+  <link rel="stylesheet" href="css/style.css" /><link rel="stylesheet" href="css/auth.css" />
 </head>
 <body>
-  <header class="app-header">
-    <div class="app-header-inner">
-      <div class="app-brand">🔬 راه‌اندازی اولیه</div>
-      <div class="app-user"><span id="userLabel"></span><button onclick="ISOAuth.logout()">خروج</button></div>
-    </div>
-  </header>
+  <header class="app-header"><div class="app-header-inner">
+    <div class="app-brand">🔬 راه‌اندازی شرکت</div>
+    <div class="app-user"><span id="userLabel"></span><button onclick="ISOAuth.logout()">خروج</button></div>
+  </div></header>
   <main class="app-main">
-    <div class="panel">
-      <h2>۱. اطلاعات کلی شرکت</h2>
+    <div class="panel"><h2>اطلاعات شرکت</h2>
       <form id="companyForm" class="form-grid">
         <div><label>نام شرکت *</label><input name="name" required /></div>
         <div><label>تلفن *</label><input name="phone" required /></div>
         <div class="full"><label>آدرس *</label><input name="address" required /></div>
         <div><label>مدیر ارشد *</label><input name="seniorManager" required /></div>
         <div><label>مدیر فنی *</label><input name="technicalManager" required /></div>
+        <div class="full"><label>لوگوی شرکت (اختیاری)</label>
+          <input type="file" id="logoFile" accept="image/*" />
+          <img id="logoPreview" alt="" style="max-height:64px;margin-top:8px;display:none" /></div>
         <div class="full"><button type="submit" class="btn btn-primary">ذخیره اطلاعات</button></div>
       </form>
+      <p id="coMsg" hidden style="margin-top:10px"></p>
     </div>
-    <div class="panel">
-      <h2>۲. ثبت پرسنل</h2>
+    <div class="panel"><h2>پرسنل</h2>
       <form id="staffForm" class="form-grid">
         <div><label>نام *</label><input name="name" required /></div>
         <div><label>سمت *</label><input name="position" required /></div>
@@ -36,48 +34,79 @@
         <div><label>نقش</label><select name="role"><option value="management">مدیریت</option><option value="technical" selected>فنی</option><option value="quality">کیفیت</option><option value="support">پشتیبانی</option></select></div>
         <div class="full"><button type="submit" class="btn btn-primary">افزودن پرسنل</button></div>
       </form>
-      <div class="table-wrap" style="margin-top:16px"><table class="data-table" id="staffTable"><thead><tr><th>نام</th><th>سمت</th><th>مدرک</th><th>نقش</th></tr></thead><tbody></tbody></table></div>
+      <div class="table-wrap" style="margin-top:16px"><table class="data-table" id="staffTable">
+        <thead><tr><th>نام</th><th>سمت</th><th>مدرک</th><th>نقش</th><th></th></tr></thead><tbody></tbody>
+      </table></div>
     </div>
     <div class="panel" style="text-align:center">
-      <button type="button" class="btn btn-primary" id="finishSetup">تکمیل راه‌اندازی و ورود به داشبورد</button>
+      <button type="button" class="btn btn-primary" id="finishSetup">تکمیل و ورود به داشبورد</button>
     </div>
   </main>
   <script src="js/auth.js"></script>
   <script>
-    const session = ISOAuth.requireAuth(['lab']);
-    document.getElementById('userLabel').textContent = session.username;
-    let company = ISOAuth.getCompany(session.companyId);
-    const roleMap = { management:'مدیریت', technical:'فنی', quality:'کیفیت', support:'پشتیبانی' };
-    function fill() {
-      if (!company) return;
-      const f = document.getElementById('companyForm');
-      f.name.value = company.name||''; f.phone.value=company.phone||''; f.address.value=company.address||'';
-      f.seniorManager.value=company.seniorManager||''; f.technicalManager.value=company.technicalManager||'';
-    }
-    function renderStaff() {
-      company = ISOAuth.getCompany(session.companyId);
-      document.querySelector('#staffTable tbody').innerHTML = (company.staff||[]).map(s =>
-        `<tr><td>${s.name}</td><td>${s.position}</td><td>${s.education||'—'}</td><td>${roleMap[s.role]||s.role}</td></tr>`
-      ).join('') || '<tr><td colspan="4">خالی</td></tr>';
-    }
-    document.getElementById('companyForm').onsubmit = e => {
-      e.preventDefault();
-      ISOAuth.updateCompany(session.companyId, Object.fromEntries(new FormData(e.target)));
-      company = ISOAuth.getCompany(session.companyId);
-      alert('ذخیره شد');
-    };
-    document.getElementById('staffForm').onsubmit = e => {
-      e.preventDefault();
-      ISOAuth.addStaff(session.companyId, Object.fromEntries(new FormData(e.target)));
-      e.target.reset(); renderStaff();
-    };
-    document.getElementById('finishSetup').onclick = () => {
-      company = ISOAuth.getCompany(session.companyId);
-      if (!company.name || !company.staff?.length) { alert('اطلاعات شرکت و حداقل یک پرسنل لازم است'); return; }
-      ISOAuth.updateCompany(session.companyId, { setupComplete: true });
-      location.href = 'dashboard.html';
-    };
-    fill(); renderStaff();
+    var logoDataUrl = '';
+    ISOAuth.initAuth().then(function () {
+      var session = ISOAuth.requireAuth(['lab']); if (!session) return;
+      document.getElementById('userLabel').textContent = session.username;
+      var company = ISOAuth.getCompany(session.companyId);
+      var roleMap = { management: 'مدیریت', technical: 'فنی', quality: 'کیفیت', support: 'پشتیبانی' };
+      function fill() {
+        company = ISOAuth.getCompany(session.companyId); if (!company) return;
+        var f = document.getElementById('companyForm');
+        f.name.value = company.name || ''; f.phone.value = company.phone || '';
+        f.address.value = company.address || ''; f.seniorManager.value = company.seniorManager || '';
+        f.technicalManager.value = company.technicalManager || '';
+        logoDataUrl = company.logoDataUrl || '';
+        if (logoDataUrl) { var img = document.getElementById('logoPreview'); img.src = logoDataUrl; img.style.display = 'block'; }
+      }
+      function renderStaff() {
+        company = ISOAuth.getCompany(session.companyId);
+        document.querySelector('#staffTable tbody').innerHTML = (company.staff || []).map(function (s) {
+          return '<tr><td>' + s.name + '</td><td>' + s.position + '</td><td>' + (s.education || '—') +
+            '</td><td>' + (roleMap[s.role] || s.role) +
+            '</td><td><button type="button" data-del="' + s.id + '" style="color:#dc2626;font-size:0.8rem">حذف</button></td></tr>';
+        }).join('') || '<tr><td colspan="5">خالی</td></tr>';
+        document.querySelectorAll('[data-del]').forEach(function (btn) {
+          btn.onclick = async function () {
+            if (!confirm('حذف شود؟')) return;
+            await ISOAuth.deleteStaff(session.companyId, btn.getAttribute('data-del'));
+            renderStaff();
+          };
+        });
+      }
+      document.getElementById('logoFile').onchange = function (e) {
+        var file = e.target.files[0]; if (!file) return;
+        if (file.size > 400000) { alert('حجم لوگو حداکثر حدود ۴۰۰KB'); return; }
+        var reader = new FileReader();
+        reader.onload = function () {
+          logoDataUrl = reader.result;
+          var img = document.getElementById('logoPreview'); img.src = logoDataUrl; img.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      };
+      document.getElementById('companyForm').onsubmit = async function (e) {
+        e.preventDefault();
+        var updates = Object.fromEntries(new FormData(e.target));
+        updates.logoDataUrl = logoDataUrl;
+        var msg = document.getElementById('coMsg');
+        try {
+          await ISOAuth.updateCompany(session.companyId, updates);
+          msg.hidden = false; msg.style.color = '#059669'; msg.textContent = 'ذخیره شد';
+        } catch (err) { msg.hidden = false; msg.style.color = '#dc2626'; msg.textContent = err.message; }
+      };
+      document.getElementById('staffForm').onsubmit = async function (e) {
+        e.preventDefault();
+        await ISOAuth.upsertStaff(session.companyId, Object.fromEntries(new FormData(e.target)));
+        e.target.reset(); renderStaff();
+      };
+      document.getElementById('finishSetup').onclick = async function () {
+        company = ISOAuth.getCompany(session.companyId);
+        if (!company.name || !(company.staff && company.staff.length)) { alert('اطلاعات شرکت و حداقل یک پرسنل لازم است'); return; }
+        await ISOAuth.updateCompany(session.companyId, { setupComplete: true });
+        location.href = 'dashboard.html';
+      };
+      fill(); renderStaff();
+    });
   </script>
 </body>
 </html>
