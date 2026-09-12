@@ -14,7 +14,7 @@
     .audit-progress > span { display:block; height:100%; background:linear-gradient(90deg,#0f4c81,#14b8a6); transition:width .3s; }
     .audit-item { border:1px solid #e2e8f0; border-radius:10px; padding:10px; margin-bottom:8px; background:#fff; }
     .audit-item.sub { margin-right:12px; border-style:dashed; background:#f8fafc; }
-    .audit-item .clause { display:inline-block; background:#e0f2fe; color:#0369a1; font-size:0.68rem; font-weight:700; padding:2px 6px; border-radius:6px; }
+    .audit-item .clause, .audit-guide .clause { display:inline-block; background:#e0f2fe; color:#0369a1; font-size:0.68rem; font-weight:700; padding:2px 6px; border-radius:6px; }
     .audit-item .qtext { font-size:0.82rem; line-height:1.55; margin:6px 0 8px; color:#1e293b; }
     .audit-actions { display:flex; flex-wrap:wrap; gap:6px; }
     .status-btn { border:1px solid #cbd5e1; background:#fff; border-radius:6px; padding:4px 8px; cursor:pointer; font-size:0.7rem; font-family:inherit; }
@@ -26,6 +26,9 @@
     .section-head { margin:14px 0 8px; padding:8px 12px; background:#0f4c81; color:#fff; border-radius:8px; font-weight:700; font-size:0.85rem; }
     .sticky-save { position:sticky; bottom:12px; z-index:20; text-align:center; }
     .stat-pills span { display:inline-block; margin:2px 0 2px 4px; font-size:0.7rem; padding:2px 7px; border-radius:99px; background:#f1f5f9; }
+    .audit-guide { background:#fffbeb; border:1px dashed #f59e0b; border-radius:10px; padding:10px 12px; margin-bottom:8px; }
+    .audit-guide .guide-label { display:inline-block; font-size:0.68rem; font-weight:700; color:#b45309; background:#fef3c7; padding:2px 8px; border-radius:6px; }
+    .audit-guide .qtext { font-size:0.8rem; color:#78350f; margin:4px 0 0; line-height:1.55; }
   </style>
 </head>
 <body>
@@ -39,7 +42,7 @@
   <main class="app-main">
     <div class="panel">
       <h2>چک‌لیست ممیزی ISO/IEC 17025 (NACI)</h2>
-      <p style="font-size:0.82rem;color:#64748b;margin-bottom:10px">وضعیت انطباق و شواهد را برای هر ردیف وارد کنید. ذخیره فقط برای شرکت شماست.</p>
+      <p style="font-size:0.82rem;color:#64748b;margin-bottom:10px">برای هر الزام وضعیت انطباق و شواهد را بنویسید. ردیف‌های <b>زرد</b> راهنما / شواهد مورد انتظار هستند.</p>
       <div class="audit-toolbar">
         <select id="filterSection"><option value="">همه بندها</option></select>
         <select id="filterStatus">
@@ -67,7 +70,6 @@
     var ITEMS = [];
     var answers = {};
     var session, companyId;
-
     function loadAnswers() {
       var co = ISOAuth.getCompany(companyId);
       answers = Object.assign({}, (co && co.checklist) || {});
@@ -78,12 +80,14 @@
         clause: it.clause || it.c || '',
         section: it.section || it.s || '',
         text: it.text || it.t || '',
-        isSub: !!(it.isSub || it.u)
+        isSub: !!(it.isSub || it.u),
+        isGuide: !!(it.isGuide || it.g)
       };
     }
     function counts() {
-      var total = ITEMS.length, yes=0, no=0, partial=0, na=0, empty=0;
-      ITEMS.forEach(function (it) {
+      var qs = ITEMS.filter(function (it) { return !it.isGuide; });
+      var total = qs.length, yes=0, no=0, partial=0, na=0, empty=0;
+      qs.forEach(function (it) {
         var s = (answers[it.id] && answers[it.id].status) || '';
         if (s === 'yes') yes++; else if (s === 'no') no++; else if (s === 'partial') partial++; else if (s === 'na') na++; else empty++;
       });
@@ -94,11 +98,12 @@
       var pct = c.total ? Math.round((c.done / c.total) * 100) : 0;
       document.getElementById('progBar').style.width = pct + '%';
       document.getElementById('stats').innerHTML =
-        '<span>پاسخ‌داده‌شده: <b>' + c.done + '/' + c.total + '</b> (' + pct + '%)</span>' +
+        '<span>الزامات: <b>' + c.done + '/' + c.total + '</b> (' + pct + '%)</span>' +
         '<span style="background:#dcfce7">انطباق: ' + c.yes + '</span>' +
         '<span style="background:#fef9c3">جزئی: ' + c.partial + '</span>' +
         '<span style="background:#fee2e2">عدم: ' + c.no + '</span>' +
-        '<span style="background:#f1f5f9">N/A: ' + c.na + '</span>';
+        '<span style="background:#f1f5f9">N/A: ' + c.na + '</span>' +
+        '<span style="background:#fef3c7">راهنما: ' + ITEMS.filter(function(x){return x.isGuide;}).length + '</span>';
     }
     function setStatus(id, status) {
       if (!answers[id]) answers[id] = { status: '', evidence: '' };
@@ -119,12 +124,21 @@
       ITEMS.forEach(function (it) {
         var a = answers[it.id] || { status: '', evidence: '' };
         if (sec && it.section !== sec) return;
-        if (st === 'empty' && a.status) return;
-        if (st && st !== 'empty' && a.status !== st) return;
+        if (!it.isGuide) {
+          if (st === 'empty' && a.status) return;
+          if (st && st !== 'empty' && a.status !== st) return;
+        } else if (st && st !== '') return;
         if (q && it.text.indexOf(q) === -1 && it.clause.indexOf(q) === -1) return;
         if (it.section !== lastSec) {
           lastSec = it.section;
           html += '<div class="section-head">' + lastSec + '</div>';
+        }
+        if (it.isGuide) {
+          html += '<div class="audit-guide">' +
+            (it.clause ? '<span class="clause">' + it.clause + '</span> ' : '') +
+            '<span class="guide-label">راهنما / شواهد مورد انتظار</span>' +
+            '<div class="qtext">' + it.text + '</div></div>';
+          return;
         }
         html += '<div class="audit-item' + (it.isSub ? ' sub' : '') + '" data-id="' + it.id + '">' +
           '<span class="clause">' + (it.clause || '—') + '</span>' +
@@ -145,11 +159,10 @@
           btn.onclick = function () { setStatus(id, btn.getAttribute('data-s')); };
         });
         var ta = box.querySelector('textarea');
-        ta.oninput = function () { setEvidence(id, ta.value); };
+        if (ta) ta.oninput = function () { setEvidence(id, ta.value); };
       });
       updateStats();
     }
-
     ISOAuth.initAuth().then(async function () {
       session = ISOAuth.requireAuth(['lab']);
       if (!session) return;
@@ -157,7 +170,6 @@
       document.getElementById('userLabel').textContent = session.username;
       renderAppNav('audit');
       loadAnswers();
-
       ITEMS = [];
       try {
         var cres = await fetch('/.netlify/functions/api?checklist=1');
@@ -166,7 +178,6 @@
           ITEMS = cj.checklist.items.map(normItem);
         }
       } catch (e) {}
-
       if (!ITEMS.length) {
         try {
           var meta = await (await fetch('../data/naci-checklist-meta.json?t=' + Date.now())).json();
@@ -179,15 +190,12 @@
           parts.forEach(function (p) {
             (p.items || []).forEach(function (it) { ITEMS.push(normItem(it)); });
           });
-        } catch (e2) {}
+        } catch (e3) {}
       }
-
       if (!ITEMS.length) {
-        document.getElementById('list').innerHTML =
-          '<p style="color:#dc2626">داده چک‌لیست بارگذاری نشد. یک‌بار صفحه را رفرش کنید. اگر ادامه داشت Redeploy بزنید.</p>';
+        document.getElementById('list').innerHTML = '<p style="color:#dc2626">داده چک‌لیست بارگذاری نشد.</p>';
         return;
       }
-
       var secs = [];
       ITEMS.forEach(function (it) {
         if (secs.indexOf(it.section) === -1) secs.push(it.section);
@@ -195,7 +203,6 @@
       document.getElementById('filterSection').innerHTML =
         '<option value="">همه بندها</option>' +
         secs.map(function (s) { return '<option value="' + s + '">' + s + '</option>'; }).join('');
-
       document.getElementById('filterSection').onchange = render;
       document.getElementById('filterStatus').onchange = render;
       document.getElementById('searchQ').oninput = render;
