@@ -1,39 +1,60 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
-  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>نفرات شاخص</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>نفرات شاخص | ISO 17025</title>
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/style.css" /><link rel="stylesheet" href="../css/auth.css" />
+  <link rel="stylesheet" href="../css/style.css" />
+  <link rel="stylesheet" href="../css/auth.css" />
 </head>
 <body>
-  <header class="app-header"><div class="app-header-inner">
-    <div class="app-brand"><a href="../dashboard.html" style="color:inherit">← داشبورد</a> | نفرات شاخص</div>
-    <div class="app-user"><button onclick="ISOAuth.logout()">خروج</button></div>
-  </div></header>
-  <main class="app-main"><div class="panel">
-    <h2 id="coName">جدول نفرات شاخص</h2>
-    <div class="table-wrap"><table class="data-table" id="tbl">
-      <thead><tr><th>ردیف</th><th>نام</th><th>سمت</th><th>مدرک</th><th>نقش</th><th>جانشین</th></tr></thead>
-      <tbody></tbody>
-    </table></div>
-    <button class="btn btn-primary" style="margin-top:16px" onclick="window.print()">چاپ</button>
-  </div></main>
+  <header class="app-header">
+    <div class="app-header-inner">
+      <div class="app-brand"><a href="../dashboard.html" style="color:inherit">← داشبورد</a> | نفرات شاخص</div>
+      <div class="app-user"><button onclick="ISOAuth.logout()">خروج</button></div>
+    </div>
+  </header>
+  <div id="appNav"></div>
+  <main class="app-main">
+    <div class="panel">
+      <h2 id="coName">جدول نفرات شاخص</h2>
+      <p id="hint" style="font-size:0.85rem;color:#64748b"></p>
+      <div class="table-wrap">
+        <table class="data-table" id="tbl">
+          <thead><tr><th>ردیف</th><th>نام</th><th>سمت</th><th>مدرک</th><th>نقش</th><th>جانشین</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <button class="btn btn-primary" style="margin-top:16px" onclick="window.print()">چاپ</button>
+      <a class="btn btn-outline" href="staff.html" style="margin-top:16px;margin-right:8px;color:#0f4c81;border-color:#0f4c81">مدیریت پرسنل</a>
+    </div>
+  </main>
   <script src="../js/auth.js"></script>
+  <script src="../js/nav.js"></script>
   <script>
     ISOAuth.initAuth().then(function () {
-      var session = ISOAuth.requireAuth(['lab']); if (!session) return;
+      var session = ISOAuth.requireAuth(['lab']);
+      if (!session) return;
+      renderAppNav('dashboard');
       var co = ISOAuth.getCompany(session.companyId);
-      document.getElementById('coName').textContent = (co.name || '') + ' — نفرات شاخص';
-      var map = {}; (co.staff || []).forEach(function (s) { map[s.id] = s; });
-      var deps = (co.matrices && co.matrices.deputies) || [];
+      document.getElementById('coName').textContent = ((co && co.name) || 'شرکت') + ' — نفرات شاخص';
+      var staff = (co && co.staff) || [];
+      if (!staff.length) {
+        document.getElementById('hint').innerHTML = 'پرسنلی ثبت نشده. ابتدا از <a href="staff.html">مدیریت پرسنل</a> نفرات را اضافه کنید.';
+      }
+      var map = {};
+      staff.forEach(function (s) { map[s.id] = s; });
+      var deps = (co && co.matrices && co.matrices.deputies) || [];
       var roleMap = { management: 'مدیریت', technical: 'فنی', quality: 'کیفیت', support: 'پشتیبانی' };
-      document.querySelector('#tbl tbody').innerHTML = (co.staff || []).map(function (s, i) {
+      document.querySelector('#tbl tbody').innerHTML = staff.map(function (s, i) {
         var dnames = deps.filter(function (d) { return d.personId === s.id; })
-          .map(function (d) { return map[d.deputyId] && map[d.deputyId].name; }).filter(Boolean).join('، ') || '—';
-        return '<tr><td>' + (i + 1) + '</td><td>' + s.name + '</td><td>' + s.position + '</td><td>' + (s.education || '—') +
-          '</td><td>' + (roleMap[s.role] || s.role) + '</td><td>' + dnames + '</td></tr>';
-      }).join('') || '<tr><td colspan="6">خالی</td></tr>';
+          .map(function (d) { return map[d.deputyId] && map[d.deputyId].name; })
+          .filter(Boolean).join('، ') || '—';
+        return '<tr><td>' + (i + 1) + '</td><td>' + s.name + '</td><td>' + s.position +
+          '</td><td>' + (s.education || '—') + '</td><td>' + (roleMap[s.role] || s.role) +
+          '</td><td>' + dnames + '</td></tr>';
+      }).join('') || '<tr><td colspan="6">خالی — پرسنل را از بخش مدیریت پرسنل اضافه کنید</td></tr>';
     });
   </script>
 </body>
