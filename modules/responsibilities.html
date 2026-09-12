@@ -2,45 +2,85 @@
 <html lang="fa" dir="rtl">
 <head>
   <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ماتریس مسئولیت</title>
+  <title>ماتریس RACI</title>
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="../css/style.css" /><link rel="stylesheet" href="../css/auth.css" />
+  <style>.raci-table select{font-size:0.75rem;padding:4px;max-width:120px}.legend span{margin-left:12px;font-size:0.85rem}</style>
 </head>
 <body>
-  <header class="app-header"><div class="app-header-inner"><div class="app-brand"><a href="../dashboard.html" style="color:inherit">← داشبورد</a> | مسئولیت‌ها</div><div class="app-user"><button onclick="ISOAuth.logout()">خروج</button></div></div></header>
-  <main class="app-main">
-    <div class="panel"><h2>تخصیص مسئولیت</h2>
-      <form id="respForm" class="form-grid">
-        <div><label>پرسنل</label><select name="personId" id="personSelect" required></select></div>
-        <div><label>بند</label><select name="clause"><option value="4.1">۴.۱ بی‌طرفی</option><option value="5">۵ ساختاری</option><option value="6.2">۶.۲ پرسنل</option><option value="7.8">۷.۸ گزارش‌دهی</option><option value="8.8">۸.۸ ممیزی</option><option value="8.9">۸.۹ بازنگری</option></select></div>
-        <div class="full"><label>شرح مسئولیت</label><input name="duty" required /></div>
-        <div class="full"><button type="submit" class="btn btn-primary">ثبت</button></div>
-      </form>
-    </div>
-    <div class="panel"><h2>ماتریس</h2><div class="table-wrap"><table class="data-table" id="tbl"><thead><tr><th>نام</th><th>بند</th><th>مسئولیت</th></tr></thead><tbody></tbody></table></div></div>
-  </main>
+  <header class="app-header"><div class="app-header-inner">
+    <div class="app-brand"><a href="../dashboard.html" style="color:inherit">← داشبورد</a> | ماتریس RACI</div>
+    <div class="app-user"><button onclick="ISOAuth.logout()">خروج</button></div>
+  </div></header>
+  <main class="app-main"><div class="panel">
+    <h2>ماتریس مسئولیت فرایندهای آزمایشگاه</h2>
+    <p class="legend" style="margin-bottom:12px;color:#64748b">
+      <span><strong>R</strong> مسئول اجرا</span>
+      <span><strong>A</strong> پاسخ‌گو</span>
+      <span><strong>C</strong> راهنما</span>
+      <span><strong>I</strong> مطلع</span>
+    </p>
+    <div class="table-wrap"><table class="data-table raci-table" id="raciTable">
+      <thead><tr><th>فرایند</th><th>R مسئول</th><th>A پاسخ‌گو</th><th>C راهنما</th><th>I مطلع</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <button type="button" class="btn btn-primary" id="saveRaci" style="margin-top:16px">ذخیره ماتریس</button>
+    <p id="msg" hidden style="margin-top:10px"></p>
+  </div></main>
   <script src="../js/auth.js"></script>
   <script>
-    const session = ISOAuth.requireAuth(['lab']);
-    let co = ISOAuth.getCompany(session.companyId);
-    document.getElementById('personSelect').innerHTML = (co.staff||[]).map(s => `<option value="${s.id}">${s.name}</option>`).join('');
-    function render() {
-      co = ISOAuth.getCompany(session.companyId);
-      const map = Object.fromEntries((co.staff||[]).map(s => [s.id, s]));
-      const list = co.matrices?.responsibilities || [];
-      document.querySelector('#tbl tbody').innerHTML = list.map(r =>
-        `<tr><td>${map[r.personId]?.name||'?'}</td><td>${r.clause}</td><td>${r.duty}</td></tr>`
-      ).join('') || '<tr><td colspan="3">خالی</td></tr>';
-    }
-    document.getElementById('respForm').onsubmit = e => {
-      e.preventDefault();
-      const fd = Object.fromEntries(new FormData(e.target));
-      co = ISOAuth.getCompany(session.companyId);
-      const list = [...(co.matrices?.responsibilities||[]), fd];
-      ISOAuth.updateCompany(session.companyId, { matrices: { ...(co.matrices||{}), responsibilities: list } });
-      e.target.reset(); render();
-    };
-    render();
+    var PROCESSES = [
+      { id: 'req_review', title: 'بررسی درخواست / قرارداد (۷.۱)' },
+      { id: 'sampling', title: 'نمونه‌برداری / دریافت قلم (۷.۳–۷.۴)' },
+      { id: 'method', title: 'انتخاب و اجرای روش (۷.۲)' },
+      { id: 'equipment', title: 'کنترل تجهیزات و کالیبراسیون (۶.۴)' },
+      { id: 'uncertainty', title: 'ارزیابی عدم قطعیت (۷.۶)' },
+      { id: 'qc', title: 'کنترل کیفیت و اعتبار نتایج (۷.۷)' },
+      { id: 'reporting', title: 'تهیه و تأیید گزارش (۷.۸)' },
+      { id: 'delivery', title: 'ارسال نتایج به مشتری' },
+      { id: 'records', title: 'نگهداری سوابق فنی (۷.۵)' },
+      { id: 'complaint', title: 'رسیدگی به شکایت (۷.۹)' },
+      { id: 'nc', title: 'کار نامنطبق (۷.۱۰)' },
+      { id: 'internal_audit', title: 'ممیزی داخلی (۸.۸)' },
+      { id: 'mgmt_review', title: 'بازنگری مدیریت (۸.۹)' }
+    ];
+    ISOAuth.initAuth().then(function () {
+      var session = ISOAuth.requireAuth(['lab']); if (!session) return;
+      var co = ISOAuth.getCompany(session.companyId);
+      var staff = co.staff || [];
+      var existing = (co.matrices && co.matrices.raci) || [];
+      function staffOptions(selected) {
+        return '<option value="">—</option>' + staff.map(function (s) {
+          return '<option value="' + s.id + '"' + (s.id === selected ? ' selected' : '') + '>' + s.name + '</option>';
+        }).join('');
+      }
+      function getRow(pid) { return existing.find(function (r) { return r.processId === pid; }) || {}; }
+      document.querySelector('#raciTable tbody').innerHTML = PROCESSES.map(function (p) {
+        var row = getRow(p.id);
+        return '<tr data-pid="' + p.id + '"><td>' + p.title + '</td>' +
+          '<td><select data-role="R">' + staffOptions(row.R) + '</select></td>' +
+          '<td><select data-role="A">' + staffOptions(row.A) + '</select></td>' +
+          '<td><select data-role="C">' + staffOptions(row.C) + '</select></td>' +
+          '<td><select data-role="I">' + staffOptions(row.I) + '</select></td></tr>';
+      }).join('');
+      document.getElementById('saveRaci').onclick = async function () {
+        var raci = [];
+        document.querySelectorAll('#raciTable tbody tr').forEach(function (tr) {
+          raci.push({
+            processId: tr.getAttribute('data-pid'),
+            R: tr.querySelector('[data-role="R"]').value,
+            A: tr.querySelector('[data-role="A"]').value,
+            C: tr.querySelector('[data-role="C"]').value,
+            I: tr.querySelector('[data-role="I"]').value
+          });
+        });
+        var msg = document.getElementById('msg');
+        try {
+          await ISOAuth.saveMatrices(session.companyId, { raci: raci });
+          msg.hidden = false; msg.style.color = '#059669'; msg.textContent = 'ماتریس ذخیره شد';
+        } catch (e) { msg.hidden = false; msg.style.color = '#dc2626'; msg.textContent = e.message; }
+      };
+    });
   </script>
 </body>
 </html>

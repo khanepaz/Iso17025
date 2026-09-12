@@ -2,36 +2,83 @@
 <html lang="fa" dir="rtl">
 <head>
   <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>مدیریت پرسنل</title>
+  <title>پرسنل</title>
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="../css/style.css" /><link rel="stylesheet" href="../css/auth.css" />
 </head>
 <body>
-  <header class="app-header"><div class="app-header-inner"><div class="app-brand"><a href="../dashboard.html" style="color:inherit">← داشبورد</a> | پرسنل</div><div class="app-user"><button onclick="ISOAuth.logout()">خروج</button></div></div></header>
+  <header class="app-header"><div class="app-header-inner">
+    <div class="app-brand"><a href="../dashboard.html" style="color:inherit">← داشبورد</a> | پرسنل</div>
+    <div class="app-user"><button onclick="ISOAuth.logout()">خروج</button></div>
+  </div></header>
   <main class="app-main">
-    <div class="panel"><h2>افزودن پرسنل</h2>
+    <div class="panel">
+      <h2 id="formTitle">افزودن پرسنل</h2>
       <form id="staffForm" class="form-grid">
+        <input type="hidden" name="id" id="staffId" />
         <div><label>نام *</label><input name="name" required /></div>
         <div><label>سمت *</label><input name="position" required /></div>
         <div><label>مدرک</label><input name="education" /></div>
         <div><label>نقش</label><select name="role"><option value="management">مدیریت</option><option value="technical" selected>فنی</option><option value="quality">کیفیت</option><option value="support">پشتیبانی</option></select></div>
-        <div class="full"><button type="submit" class="btn btn-primary">افزودن</button></div>
+        <div class="full"><button type="submit" class="btn btn-primary">ذخیره</button>
+          <button type="button" id="cancelEdit" class="btn btn-outline" style="display:none;margin-right:8px;color:#0f4c81;border-color:#0f4c81">انصراف</button></div>
       </form>
     </div>
-    <div class="panel"><h2>لیست</h2><div class="table-wrap"><table class="data-table" id="tbl"><thead><tr><th>نام</th><th>سمت</th><th>مدرک</th><th>نقش</th></tr></thead><tbody></tbody></table></div></div>
+    <div class="panel"><h2>لیست</h2>
+      <div class="table-wrap"><table class="data-table" id="tbl">
+        <thead><tr><th>نام</th><th>سمت</th><th>مدرک</th><th>نقش</th><th>عملیات</th></tr></thead><tbody></tbody>
+      </table></div>
+    </div>
   </main>
   <script src="../js/auth.js"></script>
   <script>
-    const session = ISOAuth.requireAuth(['lab']);
-    const roleMap = { management:'مدیریت', technical:'فنی', quality:'کیفیت', support:'پشتیبانی' };
-    function render() {
-      const co = ISOAuth.getCompany(session.companyId);
-      document.querySelector('#tbl tbody').innerHTML = (co.staff||[]).map(s =>
-        `<tr><td>${s.name}</td><td>${s.position}</td><td>${s.education||'—'}</td><td>${roleMap[s.role]||s.role}</td></tr>`
-      ).join('') || '<tr><td colspan="4">خالی</td></tr>';
-    }
-    document.getElementById('staffForm').onsubmit = e => { e.preventDefault(); ISOAuth.addStaff(session.companyId, Object.fromEntries(new FormData(e.target))); e.target.reset(); render(); };
-    render();
+    ISOAuth.initAuth().then(function () {
+      var session = ISOAuth.requireAuth(['lab']); if (!session) return;
+      var roleMap = { management: 'مدیریت', technical: 'فنی', quality: 'کیفیت', support: 'پشتیبانی' };
+      function render() {
+        var co = ISOAuth.getCompany(session.companyId);
+        document.querySelector('#tbl tbody').innerHTML = (co.staff || []).map(function (s) {
+          return '<tr><td>' + s.name + '</td><td>' + s.position + '</td><td>' + (s.education || '—') +
+            '</td><td>' + (roleMap[s.role] || s.role) +
+            '</td><td><button type="button" class="edit-btn" data-id="' + s.id + '">ویرایش</button> ' +
+            '<button type="button" data-del="' + s.id + '" style="color:#dc2626">حذف</button></td></tr>';
+        }).join('') || '<tr><td colspan="5">خالی</td></tr>';
+        document.querySelectorAll('[data-del]').forEach(function (btn) {
+          btn.onclick = async function () {
+            if (!confirm('حذف؟')) return;
+            await ISOAuth.deleteStaff(session.companyId, btn.getAttribute('data-del'));
+            render();
+          };
+        });
+        document.querySelectorAll('.edit-btn').forEach(function (btn) {
+          btn.onclick = function () {
+            var co = ISOAuth.getCompany(session.companyId);
+            var s = (co.staff || []).find(function (x) { return x.id === btn.getAttribute('data-id'); });
+            if (!s) return;
+            var f = document.getElementById('staffForm');
+            f.id.value = s.id; f.name.value = s.name; f.position.value = s.position;
+            f.education.value = s.education || ''; f.role.value = s.role || 'technical';
+            document.getElementById('formTitle').textContent = 'ویرایش پرسنل';
+            document.getElementById('cancelEdit').style.display = 'inline-flex';
+          };
+        });
+      }
+      document.getElementById('cancelEdit').onclick = function () {
+        document.getElementById('staffForm').reset(); document.getElementById('staffId').value = '';
+        document.getElementById('formTitle').textContent = 'افزودن پرسنل'; this.style.display = 'none';
+      };
+      document.getElementById('staffForm').onsubmit = async function (e) {
+        e.preventDefault();
+        var fd = Object.fromEntries(new FormData(e.target));
+        if (!fd.id) delete fd.id;
+        await ISOAuth.upsertStaff(session.companyId, fd);
+        e.target.reset(); document.getElementById('staffId').value = '';
+        document.getElementById('formTitle').textContent = 'افزودن پرسنل';
+        document.getElementById('cancelEdit').style.display = 'none';
+        render();
+      };
+      render();
+    });
   </script>
 </body>
 </html>
