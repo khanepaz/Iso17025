@@ -26,14 +26,22 @@
       "seniorManager": "ایزدپناه",
       "technicalManager": "خانه پز",
       "logoDataUrl": "",
-      "staff": [],
+      "staff": [
+        {
+          "name": "خانه پز",
+          "position": "مدیر فنی",
+          "education": "",
+          "role": "technical",
+          "id": "st-1789191768406"
+        }
+      ],
       "matrices": {
         "deputies": [],
         "raci": []
       },
       "setupComplete": false,
       "createdAt": "2026-09-12T05:40:56.835Z",
-      "updatedAt": "2026-09-12T05:40:56.836Z"
+      "updatedAt": "2026-09-12T05:42:48.406Z"
     }
   ]
 }
