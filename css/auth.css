@@ -11,7 +11,7 @@
   background: linear-gradient(135deg, #0f4c81, #0a355c);
   color: #fff;
   position: sticky;
-  top: 0;
+  top: 40px;
   z-index: 100;
   box-shadow: 0 2px 12px rgba(15, 76, 129, 0.25);
 }
