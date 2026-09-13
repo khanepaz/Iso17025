@@ -1,33 +1,44 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
-  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ماتریس RACI</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ماتریس RACI | ISO 17025</title>
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/style.css" /><link rel="stylesheet" href="../css/auth.css" />
+  <link rel="stylesheet" href="../css/style.css" />
+  <link rel="stylesheet" href="../css/auth.css" />
   <style>.raci-table select{font-size:0.75rem;padding:4px;max-width:120px}.legend span{margin-left:12px;font-size:0.85rem}</style>
 </head>
 <body>
-  <header class="app-header"><div class="app-header-inner">
-    <div class="app-brand"><a href="../dashboard.html" style="color:inherit">← داشبورد</a> | ماتریس RACI</div>
-    <div class="app-user"><button onclick="ISOAuth.logout()">خروج</button></div>
-  </div></header>
-  <main class="app-main"><div class="panel">
-    <h2>ماتریس مسئولیت فرایندهای آزمایشگاه</h2>
-    <p class="legend" style="margin-bottom:12px;color:#64748b">
-      <span><strong>R</strong> مسئول اجرا</span>
-      <span><strong>A</strong> پاسخ‌گو</span>
-      <span><strong>C</strong> راهنما</span>
-      <span><strong>I</strong> مطلع</span>
-    </p>
-    <div class="table-wrap"><table class="data-table raci-table" id="raciTable">
-      <thead><tr><th>فرایند</th><th>R مسئول</th><th>A پاسخ‌گو</th><th>C راهنما</th><th>I مطلع</th></tr></thead>
-      <tbody></tbody>
-    </table></div>
-    <button type="button" class="btn btn-primary" id="saveRaci" style="margin-top:16px">ذخیره ماتریس</button>
-    <p id="msg" hidden style="margin-top:10px"></p>
-  </div></main>
+  <header class="app-header">
+    <div class="app-header-inner">
+      <div class="app-brand"><a href="../dashboard.html" style="color:inherit">← داشبورد</a> | ماتریس RACI</div>
+      <div class="app-user"><button onclick="ISOAuth.logout()">خروج</button></div>
+    </div>
+  </header>
+  <div id="appNav"></div>
+  <main class="app-main">
+    <div class="panel">
+      <h2>ماتریس مسئولیت فرایندهای آزمایشگاه</h2>
+      <p id="hint" style="font-size:0.85rem;color:#64748b;margin-bottom:10px"></p>
+      <p class="legend" style="margin-bottom:12px;color:#64748b">
+        <span><strong>R</strong> مسئول اجرا</span>
+        <span><strong>A</strong> پاسخ‌گو</span>
+        <span><strong>C</strong> راهنما</span>
+        <span><strong>I</strong> مطلع</span>
+      </p>
+      <div class="table-wrap">
+        <table class="data-table raci-table" id="raciTable">
+          <thead><tr><th>فرایند</th><th>R مسئول</th><th>A پاسخ‌گو</th><th>C راهنما</th><th>I مطلع</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <button type="button" class="btn btn-primary" id="saveRaci" style="margin-top:16px">ذخیره ماتریس</button>
+      <p id="msg" hidden style="margin-top:10px"></p>
+    </div>
+  </main>
   <script src="../js/auth.js"></script>
+  <script src="../js/nav.js"></script>
   <script>
     var PROCESSES = [
       { id: 'req_review', title: 'بررسی درخواست / قرارداد (۷.۱)' },
@@ -44,11 +55,17 @@
       { id: 'internal_audit', title: 'ممیزی داخلی (۸.۸)' },
       { id: 'mgmt_review', title: 'بازنگری مدیریت (۸.۹)' }
     ];
-    ISOAuth.initAuth().then(function () {
-      var session = ISOAuth.requireAuth(['lab']); if (!session) return;
+    ISOAuth.initAuth().then(async function () {
+      var session = ISOAuth.requireAuth(['lab']);
+      if (!session) return;
+      if (typeof renderAppNav === 'function') renderAppNav('raci');
+      try { await ISOAuth.refresh(); } catch (e) {}
       var co = ISOAuth.getCompany(session.companyId);
-      var staff = co.staff || [];
-      var existing = (co.matrices && co.matrices.raci) || [];
+      var staff = (co && co.staff) || [];
+      var existing = (co && co.matrices && co.matrices.raci) || [];
+      document.getElementById('hint').textContent = staff.length
+        ? ('شرکت: ' + (co.name || '') + ' | پرسنل: ' + staff.length)
+        : 'پرسنلی ثبت نشده — از مدیریت پرسنل اضافه کنید.';
       function staffOptions(selected) {
         return '<option value="">—</option>' + staff.map(function (s) {
           return '<option value="' + s.id + '"' + (s.id === selected ? ' selected' : '') + '>' + s.name + '</option>';
@@ -78,7 +95,9 @@
         try {
           await ISOAuth.saveMatrices(session.companyId, { raci: raci });
           msg.hidden = false; msg.style.color = '#059669'; msg.textContent = 'ماتریس ذخیره شد';
-        } catch (e) { msg.hidden = false; msg.style.color = '#dc2626'; msg.textContent = e.message; }
+        } catch (e) {
+          msg.hidden = false; msg.style.color = '#dc2626'; msg.textContent = e.message;
+        }
       };
     });
   </script>
