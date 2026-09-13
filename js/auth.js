@@ -1,25 +1,51 @@
+/**
+ * Auth + tenant data — مسیرها نسبت به ریشه سایت محاسبه می‌شوند
+ * تا در /modules/ و /admin/ هم درست کار کند.
+ */
 const SESSION_KEY = 'iso17025_session';
-const API_URL = '/.netlify/functions/api';
-const FALLBACK_JSON = 'data/users.json';
 const DEFAULT_ADMIN = {
   id: 'admin-001', username: 'admin', password: 'Admin@17025',
   role: 'admin', companyId: null, createdAt: new Date().toISOString()
 };
 let _cache = null;
 
+/** ریشهٔ سایت: / یا /Iso17025/ */
+function siteRoot() {
+  try {
+    var parts = location.pathname.split('/').filter(Boolean);
+    if (parts.length && /\./.test(parts[parts.length - 1])) parts.pop();
+    if (parts.length && (parts[parts.length - 1] === 'modules' || parts[parts.length - 1] === 'admin')) {
+      parts.pop();
+    }
+    return parts.length ? '/' + parts.join('/') + '/' : '/';
+  } catch (e) {
+    return '/';
+  }
+}
+function siteUrl(rel) {
+  rel = String(rel || '').replace(/^\//, '');
+  return siteRoot() + rel;
+}
+function apiUrl() {
+  return '/.netlify/functions/api';
+}
+
 function getSession() {
-  try { return JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); } catch { return null; }
+  try { return JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); } catch (e) { return null; }
 }
 function setSession(user) {
   if (!user) { sessionStorage.removeItem(SESSION_KEY); return; }
   sessionStorage.setItem(SESSION_KEY, JSON.stringify({
-    id: user.id, username: user.username, role: user.role, companyId: user.companyId || null
+    id: user.id,
+    username: user.username,
+    role: user.role,
+    companyId: user.companyId != null ? String(user.companyId) : null
   }));
 }
 
 async function apiGet() {
   try {
-    const res = await fetch(API_URL, { cache: 'no-store' });
+    const res = await fetch(apiUrl(), { cache: 'no-store' });
     const text = await res.text();
     if (res.ok) {
       try {
@@ -29,7 +55,8 @@ async function apiGet() {
     }
   } catch (e) {}
   try {
-    const res = await fetch(FALLBACK_JSON + '?t=' + Date.now(), { cache: 'no-store' });
+    const url = siteUrl('data/users.json') + '?t=' + Date.now();
+    const res = await fetch(url, { cache: 'no-store' });
     if (res.ok) return await res.json();
   } catch (e) {}
   return { users: [DEFAULT_ADMIN], companies: [] };
@@ -38,19 +65,19 @@ async function apiGet() {
 async function apiPost(action, payload) {
   let res;
   try {
-    res = await fetch(API_URL, {
+    res = await fetch(apiUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(Object.assign({ action: action }, payload || {}))
     });
   } catch (e) {
-    throw new Error('ارتباط با سرور برقرار نشد. از دامنه Netlify باز کنید.');
+    throw new Error('ارتباط با سرور برقرار نشد. سایت را از دامنه Netlify باز کنید.');
   }
   const text = await res.text();
   let j;
   try { j = JSON.parse(text); }
   catch (e) {
-    if (res.status === 404) throw new Error('Function پیدا نشد (404). از دامنه Netlify استفاده کنید.');
+    if (res.status === 404) throw new Error('Function پیدا نشد (404). از دامنه Netlify استفاده کنید و Redeploy بزنید.');
     throw new Error('پاسخ سرور JSON نیست (کد ' + res.status + ').');
   }
   if (!res.ok || !j.ok) throw new Error(j.error || ('خطای سرور ' + res.status));
@@ -61,7 +88,16 @@ async function initAuth() {
   const data = await apiGet();
   if (!data.users) data.users = [];
   if (!data.companies) data.companies = [];
-  if (!data.users.some(function (u) { return u.username === 'admin'; })) data.users.unshift(Object.assign({}, DEFAULT_ADMIN));
+  if (!data.users.some(function (u) { return u.username === 'admin'; })) {
+    data.users.unshift(Object.assign({}, DEFAULT_ADMIN));
+  }
+  data.companies.forEach(function (c) {
+    if (c && c.id != null) c.id = String(c.id);
+    if (c && !Array.isArray(c.staff)) c.staff = [];
+  });
+  data.users.forEach(function (u) {
+    if (u && u.companyId != null) u.companyId = String(u.companyId);
+  });
   _cache = data;
   return data;
 }
@@ -76,31 +112,43 @@ function login(username, password) {
   setSession(user);
   return { ok: true, user: user };
 }
-function logout() { setSession(null); window.location.href = 'index.html?logout=1'; }
+function logout() {
+  setSession(null);
+  window.location.href = siteUrl('index.html') + '?logout=1';
+}
 function requireAuth(roles) {
   const session = getSession();
-  if (!session) { window.location.href = 'index.html?logout=1'; return null; }
+  if (!session) {
+    window.location.href = siteUrl('index.html') + '?logout=1';
+    return null;
+  }
   if (roles && roles.indexOf(session.role) === -1) {
-    window.location.href = session.role === 'admin' ? 'admin/index.html' : 'dashboard.html';
+    window.location.href = session.role === 'admin'
+      ? siteUrl('admin/index.html')
+      : siteUrl('dashboard.html');
     return null;
   }
   return session;
 }
 function afterLoginRedirect(user) {
-  if (user.role === 'admin') { window.location.href = 'admin/index.html'; return; }
+  if (user.role === 'admin') {
+    window.location.href = siteUrl('admin/index.html');
+    return;
+  }
   const co = getCompany(user.companyId);
-  window.location.href = co && !co.setupComplete ? 'setup.html' : 'dashboard.html';
+  window.location.href = co && !co.setupComplete
+    ? siteUrl('setup.html')
+    : siteUrl('dashboard.html');
 }
 function getCompany(companyId) {
-  if (!companyId) return null;
-  return loadData().companies.find(function (c) { return c.id === companyId; }) || null;
+  if (companyId == null || companyId === '') return null;
+  const id = String(companyId);
+  return loadData().companies.find(function (c) { return String(c.id) === id; }) || null;
 }
 function listLabUsers() {
   const data = loadData();
   return data.users.filter(function (u) { return u.role === 'lab'; }).map(function (u) {
-    return Object.assign({}, u, {
-      company: data.companies.find(function (c) { return c.id === u.companyId; })
-    });
+    return Object.assign({}, u, { company: getCompany(u.companyId) });
   });
 }
 
@@ -114,19 +162,19 @@ async function deleteLabUser(username) {
   const r = await apiPost('deleteLabUser', { username: username }); await refresh(); return r;
 }
 async function updateCompany(companyId, updates) {
-  const r = await apiPost('updateCompany', { companyId: companyId, updates: updates }); await refresh(); return r;
+  const r = await apiPost('updateCompany', { companyId: String(companyId), updates: updates }); await refresh(); return r;
 }
 async function upsertStaff(companyId, staff) {
-  const r = await apiPost('upsertStaff', { companyId: companyId, staff: staff }); await refresh(); return r;
+  const r = await apiPost('upsertStaff', { companyId: String(companyId), staff: staff }); await refresh(); return r;
 }
 async function deleteStaff(companyId, staffId) {
-  const r = await apiPost('deleteStaff', { companyId: companyId, staffId: staffId }); await refresh(); return r;
+  const r = await apiPost('deleteStaff', { companyId: String(companyId), staffId: staffId }); await refresh(); return r;
 }
 async function saveMatrices(companyId, matrices) {
-  const r = await apiPost('saveMatrices', { companyId: companyId, matrices: matrices }); await refresh(); return r;
+  const r = await apiPost('saveMatrices', { companyId: String(companyId), matrices: matrices }); await refresh(); return r;
 }
 async function saveChecklist(companyId, answers) {
-  const r = await apiPost('saveChecklist', { companyId: companyId, answers: answers }); await refresh(); return r;
+  const r = await apiPost('saveChecklist', { companyId: String(companyId), answers: answers }); await refresh(); return r;
 }
 async function changePassword(username, oldPassword, newPassword) {
   return apiPost('changePassword', { username: username, oldPassword: oldPassword, newPassword: newPassword });
@@ -138,5 +186,6 @@ window.ISOAuth = {
   getCompany: getCompany, listLabUsers: listLabUsers, createLabUser: createLabUser,
   updateLabUser: updateLabUser, deleteLabUser: deleteLabUser,
   updateCompany: updateCompany, upsertStaff: upsertStaff, deleteStaff: deleteStaff,
-  saveMatrices: saveMatrices, saveChecklist: saveChecklist, changePassword: changePassword
+  saveMatrices: saveMatrices, saveChecklist: saveChecklist, changePassword: changePassword,
+  siteRoot: siteRoot, siteUrl: siteUrl
 };
